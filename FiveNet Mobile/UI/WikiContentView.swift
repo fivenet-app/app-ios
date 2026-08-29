@@ -6,6 +6,10 @@ import SwiftProtobuf
 enum WikiInline {
     case text(String, marks: [WikiMark])
     case hardBreak
+    /// fivenet `CheckboxStandalone`-Node: inline Checkbox in einem Absatz
+    /// (Web `tiptap/extensions/CheckboxStandalone.ts`, Node-Typ
+    /// `checkboxStandalone`, Attribut `checked`).
+    case checkbox(Bool)
 }
 
 enum WikiMark {
@@ -224,6 +228,9 @@ enum WikiContent {
                 return [.text(node.text ?? "", marks: node.marks)]
             case "hardBreak":
                 return [.hardBreak]
+            case "checkboxStandalone":
+                let checked = node.attrs["checked"] == "true" || node.attrs["data-checked"] == "true"
+                return [.checkbox(checked)]
             default:
                 return inline(from: node.children)
             }
@@ -384,6 +391,16 @@ enum WikiContent {
                     result += apply([.code], to: node.content)
                 case "a":
                     result += apply([.link(url: node.attrs["href"] ?? "")], to: node.content)
+                case "span":
+                    // fivenet CheckboxStandalone: <span data-type="checkboxStandalone" data-checked>
+                    if node.attrs["data-type"] == "checkboxStandalone" {
+                        let dataChecked = node.attrs["data-checked"] ?? ""
+                        let checked = node.attrs["checked"] ?? ""
+                        let isChecked = dataChecked == "true" || dataChecked == "" || checked == "true" || checked == ""
+                        result.append(.checkbox(isChecked))
+                    } else {
+                        result += htmlInline(from: node.content)
+                    }
                 default:
                     result += htmlInline(from: node.content)
                 }
@@ -399,6 +416,7 @@ enum WikiContent {
             switch inline {
             case .text(let string, let existing): return .text(string, marks: existing + marks)
             case .hardBreak: return .hardBreak
+            case .checkbox(let checked): return .checkbox(checked)
             }
         }
     }
@@ -406,8 +424,12 @@ enum WikiContent {
     private static func htmlListItems(from nodes: [Resources_Common_Content_RichTextHtmlNode]) -> [WikiListItem] {
         nodes.filter { $0.tag == "li" }.map { node in
             var item = WikiListItem(blocks: blocks(fromSubListItem: node))
-            item.isChecked = node.attrs["data-checked"]?.lowercased() == "true" ||
-                node.attrs["checked"]?.lowercased() == "true"
+            // Boolean-Attribute ohne Wert (`<li data-checked>`) liefert Go als
+            // leeren String — das zählt wie gesetzt (Web `parseHTML`-Muster).
+            let dataChecked = node.attrs["data-checked"] ?? ""
+            let checked = node.attrs["checked"] ?? ""
+            item.isChecked = dataChecked == "true" || dataChecked == "" ||
+                checked == "true" || checked == ""
             return item
         }
     }
@@ -545,11 +567,11 @@ struct WikiBlockView: View {
     var body: some View {
         switch block {
         case .paragraph(let inline):
-            inlineText(inline)
+            inlineView(inline)
                 .font(.body)
                 .textSelection(.enabled)
         case .heading(let level, let inline):
-            inlineText(inline)
+            inlineView(inline)
                 .font(.system(size: headingSize(for: level), weight: .bold))
                 .padding(.top, level <= 2 ? Theme.Spacing.sm : 0)
         case .bulletList(let items):
@@ -599,7 +621,10 @@ struct WikiBlockView: View {
                 }
             }
         case .rule:
-            Divider()
+            Rectangle()
+                .fill(Self.tableSeparator)
+                .frame(height: 1.5)
+                .padding(.vertical, Theme.Spacing.sm)
         case .table(let table):
             tableContent(table)
         case .image(let url, let alt):
@@ -757,6 +782,7 @@ struct WikiBlockView: View {
                     RoundedRectangle(cornerRadius: Theme.Radius.sm, style: .continuous)
                         .strokeBorder(Color(.separator).opacity(0.8))
                 )
+                .clipShape(RoundedRectangle(cornerRadius: Theme.Radius.sm, style: .continuous))
             }
         }
         .frame(maxWidth: .infinity)
@@ -873,6 +899,44 @@ struct WikiBlockView: View {
         .padding(Theme.Spacing.md)
     }
 
+    /// Rendert Inline-Inhalte. Absätze mit Inline-Checkboxen laufen über
+    /// `checkboxFlow` (Icon + Text nebeneinander), reine Text-Absätze über die
+    /// performante AttributedString-Variante `inlineText`.
+    @ViewBuilder
+    private func inlineView(_ inline: [WikiInline]) -> some View {
+        if inline.contains(where: { if case .checkbox = $0 { return true } else { return false } }) {
+            checkboxFlow(inline)
+        } else {
+            inlineText(inline)
+        }
+    }
+
+    /// Absatz-Flow mit Inline-Checkboxen: läuft je Abschnitt in einem HStack,
+    /// damit die Checkbox-Symbole direkt im Textfluss stehen.
+    private func checkboxFlow(_ inline: [WikiInline]) -> some View {
+        var runs: [[WikiInline]] = []
+        var current: [WikiInline] = []
+        for part in inline {
+            if case .checkbox = part {
+                if !current.isEmpty { runs.append(current); current = [] }
+                runs.append([part])
+            } else {
+                current.append(part)
+            }
+        }
+        if !current.isEmpty { runs.append(current) }
+
+        return HStack(alignment: .firstTextBaseline, spacing: Theme.Spacing.xs) {
+            ForEach(runs.indices, id: \.self) { index in
+                if case .checkbox(let checked) = runs[index].first {
+                    checkboxSymbol(isChecked: checked)
+                } else {
+                    inlineText(runs[index])
+                }
+            }
+        }
+    }
+
     private func inlineText(_ inline: [WikiInline]) -> Text {
         var text = AttributedString()
         for part in inline {
@@ -881,6 +945,9 @@ struct WikiBlockView: View {
                 text.append(attributedSegment(string, marks: marks))
             case .hardBreak:
                 text.append(AttributedString("\n"))
+            case .checkbox:
+                // Wird via `checkboxFlow` gerendert; hier nur für Exhaustivität.
+                break
             }
         }
         return Text(text)

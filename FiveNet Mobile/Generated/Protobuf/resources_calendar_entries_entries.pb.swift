@@ -291,6 +291,11 @@ nonisolated struct Resources_Calendar_Entries_CalendarEntry: @unchecked Sendable
   /// Clears the value of `endTime`. Subsequent reads from it will return its default value.
   mutating func clearEndTime() {_uniqueStorage()._endTime = nil}
 
+  var allDay: Bool {
+    get {_storage._allDay}
+    set {_uniqueStorage()._allDay = newValue}
+  }
+
   var title: String {
     get {_storage._title}
     set {_uniqueStorage()._title = newValue}
@@ -318,6 +323,15 @@ nonisolated struct Resources_Calendar_Entries_CalendarEntry: @unchecked Sendable
   var hasRsvpOpen: Bool {_storage._rsvpOpen != nil}
   /// Clears the value of `rsvpOpen`. Subsequent reads from it will return its default value.
   mutating func clearRsvpOpen() {_uniqueStorage()._rsvpOpen = nil}
+
+  var icon: String {
+    get {_storage._icon ?? String()}
+    set {_uniqueStorage()._icon = newValue}
+  }
+  /// Returns true if `icon` has been explicitly set.
+  var hasIcon: Bool {_storage._icon != nil}
+  /// Clears the value of `icon`. Subsequent reads from it will return its default value.
+  mutating func clearIcon() {_uniqueStorage()._icon = nil}
 
   var creatorID: Int32 {
     get {_storage._creatorID ?? 0}
@@ -541,7 +555,7 @@ nonisolated extension Resources_Calendar_Entries_CalendarEntryOccurrence: SwiftP
 
 nonisolated extension Resources_Calendar_Entries_CalendarEntry: SwiftProtobuf.Message, SwiftProtobuf._MessageImplementationBase, SwiftProtobuf._ProtoNameProviding {
   static let protoMessageName: String = _protobuf_package + ".CalendarEntry"
-  static let _protobuf_nameMap = SwiftProtobuf._NameMap(bytecode: "\0\u{1}id\0\u{3}created_at\0\u{3}updated_at\0\u{3}deleted_at\0\u{3}calendar_id\0\u{1}calendar\0\u{1}job\0\u{3}start_time\0\u{3}end_time\0\u{1}title\0\u{1}content\0\u{1}closed\0\u{3}rsvp_open\0\u{3}creator_id\0\u{1}creator\0\u{3}creator_job\0\u{1}recurring\0\u{1}rsvp\0\u{1}occurrence\0\u{3}recurring_until\0\u{3}recurrence_version\0")
+  static let _protobuf_nameMap = SwiftProtobuf._NameMap(bytecode: "\0\u{1}id\0\u{3}created_at\0\u{3}updated_at\0\u{3}deleted_at\0\u{3}calendar_id\0\u{1}calendar\0\u{1}job\0\u{3}start_time\0\u{3}end_time\0\u{1}title\0\u{1}content\0\u{1}closed\0\u{3}rsvp_open\0\u{3}creator_id\0\u{1}creator\0\u{3}creator_job\0\u{1}recurring\0\u{1}rsvp\0\u{1}occurrence\0\u{3}recurring_until\0\u{3}recurrence_version\0\u{3}all_day\0\u{1}icon\0")
 
   fileprivate class _StorageClass {
     var _id: Int64 = 0
@@ -553,10 +567,12 @@ nonisolated extension Resources_Calendar_Entries_CalendarEntry: SwiftProtobuf.Me
     var _job: String? = nil
     var _startTime: Resources_Timestamp_Timestamp? = nil
     var _endTime: Resources_Timestamp_Timestamp? = nil
+    var _allDay: Bool = false
     var _title: String = String()
     var _content: Resources_Common_Content_Content? = nil
     var _closed: Bool = false
     var _rsvpOpen: Bool? = nil
+    var _icon: String? = nil
     var _creatorID: Int32? = nil
     var _creator: Resources_Users_Short_UserShort? = nil
     var _creatorJob: String = String()
@@ -584,10 +600,12 @@ nonisolated extension Resources_Calendar_Entries_CalendarEntry: SwiftProtobuf.Me
       _job = source._job
       _startTime = source._startTime
       _endTime = source._endTime
+      _allDay = source._allDay
       _title = source._title
       _content = source._content
       _closed = source._closed
       _rsvpOpen = source._rsvpOpen
+      _icon = source._icon
       _creatorID = source._creatorID
       _creator = source._creator
       _creatorJob = source._creatorJob
@@ -635,6 +653,8 @@ nonisolated extension Resources_Calendar_Entries_CalendarEntry: SwiftProtobuf.Me
         case 19: try { try decoder.decodeSingularMessageField(value: &_storage._occurrence) }()
         case 20: try { try decoder.decodeSingularMessageField(value: &_storage._recurringUntil) }()
         case 21: try { try decoder.decodeSingularInt32Field(value: &_storage._recurrenceVersion) }()
+        case 22: try { try decoder.decodeSingularBoolField(value: &_storage._allDay) }()
+        case 23: try { try decoder.decodeSingularStringField(value: &_storage._icon) }()
         default: break
         }
       }
@@ -710,6 +730,12 @@ nonisolated extension Resources_Calendar_Entries_CalendarEntry: SwiftProtobuf.Me
       if _storage._recurrenceVersion != 0 {
         try visitor.visitSingularInt32Field(value: _storage._recurrenceVersion, fieldNumber: 21)
       }
+      if _storage._allDay != false {
+        try visitor.visitSingularBoolField(value: _storage._allDay, fieldNumber: 22)
+      }
+      try { if let v = _storage._icon {
+        try visitor.visitSingularStringField(value: v, fieldNumber: 23)
+      } }()
     }
     try unknownFields.traverse(visitor: &visitor)
   }
@@ -728,10 +754,12 @@ nonisolated extension Resources_Calendar_Entries_CalendarEntry: SwiftProtobuf.Me
         if _storage._job != rhs_storage._job {return false}
         if _storage._startTime != rhs_storage._startTime {return false}
         if _storage._endTime != rhs_storage._endTime {return false}
+        if _storage._allDay != rhs_storage._allDay {return false}
         if _storage._title != rhs_storage._title {return false}
         if _storage._content != rhs_storage._content {return false}
         if _storage._closed != rhs_storage._closed {return false}
         if _storage._rsvpOpen != rhs_storage._rsvpOpen {return false}
+        if _storage._icon != rhs_storage._icon {return false}
         if _storage._creatorID != rhs_storage._creatorID {return false}
         if _storage._creator != rhs_storage._creator {return false}
         if _storage._creatorJob != rhs_storage._creatorJob {return false}

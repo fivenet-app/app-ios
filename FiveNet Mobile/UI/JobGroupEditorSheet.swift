@@ -36,7 +36,9 @@ struct JobGroupEditorSheet: View {
     @State private var showAddJobAccess = false
     @State private var newUser: Resources_Users_Short_UserShort?
     @State private var newUserAccessLevel: Int32 = Int32(Resources_Jobs_Groups_Access_AccessLevel.view.rawValue)
-    @State private var newJobAccess: Resources_Access_JobAccess?
+    @State private var newJobCode = ""
+    @State private var newJobLabel = ""
+    @State private var newJobMinimumGrade: Int32 = 0
     @State private var newJobAccessLevel: Int32 = Int32(Resources_Jobs_Groups_Access_AccessLevel.view.rawValue)
 
     @State private var isSaving = false
@@ -150,13 +152,20 @@ struct JobGroupEditorSheet: View {
         }
         .sheet(isPresented: $showAddJobAccess) {
             GroupAccessJobSheet(
+                jobCode: $newJobCode,
+                jobLabel: $newJobLabel,
+                minimumGrade: $newJobMinimumGrade,
                 accessLevel: $newJobAccessLevel,
                 onAdd: {
-                    guard let current = newJobAccess else { return }
-                    var entry = current
+                    var entry = Resources_Access_JobAccess()
+                    entry.job = newJobCode.trimmingCharacters(in: .whitespacesAndNewlines)
+                    entry.jobLabel = newJobLabel
+                    entry.minimumGrade = newJobMinimumGrade
                     entry.access = newJobAccessLevel
                     jobAccess.append(entry)
-                    newJobAccess = nil
+                    newJobCode = ""
+                    newJobLabel = ""
+                    newJobMinimumGrade = 0
                     showAddJobAccess = false
                 }
             )
@@ -191,9 +200,17 @@ struct JobGroupEditorSheet: View {
             ForEach(Array(jobAccess.enumerated()), id: \.element.id) { index, entry in
                 HStack {
                     VStack(alignment: .leading) {
-                        Text(entry.job.isEmpty ? "Alle Jobs" : entry.job)
-                            .font(.subheadline)
-                        Text(accessLevelLabel(entry.access))
+                        if entry.job.isEmpty {
+                            Text("Alle Jobs")
+                                .font(.subheadline)
+                        } else if entry.hasJobLabel && !entry.jobLabel.isEmpty {
+                            Text("\(entry.jobLabel) (\(entry.job))")
+                                .font(.subheadline)
+                        } else {
+                            Text(entry.job)
+                                .font(.subheadline)
+                        }
+                        Text(subtitle(for: entry))
                             .font(Theme.Typography.caption)
                             .foregroundStyle(.secondary)
                     }
@@ -227,7 +244,9 @@ struct JobGroupEditorSheet: View {
             }
 
             Button {
-                newJobAccess = Resources_Access_JobAccess()
+                newJobCode = ""
+                newJobLabel = ""
+                newJobMinimumGrade = 0
                 newJobAccessLevel = Int32(Resources_Jobs_Groups_Access_AccessLevel.view.rawValue)
                 showAddJobAccess = true
             } label: {
@@ -281,6 +300,14 @@ struct JobGroupEditorSheet: View {
         }
     }
 
+    private func subtitle(for entry: Resources_Access_JobAccess) -> String {
+        var parts = [accessLevelLabel(entry.access)]
+        if entry.minimumGrade > 0 {
+            parts.append("Mindestrang \(entry.minimumGrade)")
+        }
+        return parts.joined(separator: " · ")
+    }
+
     func save() async {
         isSaving = true
         defer { isSaving = false }
@@ -332,14 +359,15 @@ struct JobGroupEditorSheet: View {
 }
 
 /// Sheet zum Hinzufügen eines Job-Zugriffs (Job-Code + Zugriffsstufe).
+/// Alle Eingabefelder sind `@Binding` an den Parent gebunden, damit die
+/// Werte beim Hinzufügen tatsächlich in den `JobAccess`-Eintrag fließen.
 private struct GroupAccessJobSheet: View {
     @Environment(\.dismiss) private var dismiss
+    @Binding var jobCode: String
+    @Binding var jobLabel: String
+    @Binding var minimumGrade: Int32
     @Binding var accessLevel: Int32
     let onAdd: () -> Void
-
-    @State private var jobCode = ""
-    @State private var jobLabelText = ""
-    @State private var minimumGrade: Int32 = 0
 
     private var canAdd: Bool {
         !jobCode.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty
@@ -349,10 +377,10 @@ private struct GroupAccessJobSheet: View {
         NavigationStack {
             Form {
                 Section("Job") {
-                    TextField("Job-Code (z. B. policja)", text: $jobCode)
+                    TextField("Job-Code (z. B. police)", text: $jobCode)
                         .autocorrectionDisabled()
                         .textInputAutocapitalization(.never)
-                    TextField("Job-Name (optional)", text: $jobLabelText)
+                    TextField("Job-Name (optional)", text: $jobLabel)
                     Stepper(value: $minimumGrade, in: 0...30) {
                         Text("Mindestrang: \(minimumGrade)")
                     }

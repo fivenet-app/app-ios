@@ -130,16 +130,6 @@ nonisolated struct Services_Jobs_GetGroupRequest: Sendable {
 
   var id: Int64 = 0
 
-  var includeRules: Bool = false
-
-  var includeLeaders: Bool = false
-
-  var includeManualMembers: Bool = false
-
-  var includeExclusions: Bool = false
-
-  var includeResolvedMembers: Bool = false
-
   var includeArchived: Bool = false
 
   var unknownFields = SwiftProtobuf.UnknownStorage()
@@ -160,16 +150,6 @@ nonisolated struct Services_Jobs_GetGroupResponse: Sendable {
   var hasGroup: Bool {self._group != nil}
   /// Clears the value of `group`. Subsequent reads from it will return its default value.
   mutating func clearGroup() {self._group = nil}
-
-  var rules: [Resources_Jobs_Groups_GroupRule] = []
-
-  var leaders: [Resources_Jobs_Groups_GroupLeader] = []
-
-  var manualMembers: [Resources_Jobs_Groups_GroupManualMember] = []
-
-  var exclusions: [Resources_Jobs_Groups_GroupMemberExclusion] = []
-
-  var resolvedMembers: [Resources_Jobs_Groups_GroupResolvedMember] = []
 
   var access: Resources_Access_Access {
     get {_access ?? Resources_Access_Access()}
@@ -1569,7 +1549,7 @@ nonisolated extension Services_Jobs_ListGroupsResponse: SwiftProtobuf.Message, S
 
 nonisolated extension Services_Jobs_GetGroupRequest: SwiftProtobuf.Message, SwiftProtobuf._MessageImplementationBase, SwiftProtobuf._ProtoNameProviding {
   static let protoMessageName: String = _protobuf_package + ".GetGroupRequest"
-  static let _protobuf_nameMap = SwiftProtobuf._NameMap(bytecode: "\0\u{1}id\0\u{3}include_rules\0\u{3}include_leaders\0\u{3}include_manual_members\0\u{3}include_exclusions\0\u{3}include_resolved_members\0\u{3}include_archived\0")
+  static let _protobuf_nameMap = SwiftProtobuf._NameMap(bytecode: "\0\u{1}id\0\u{3}include_archived\0")
 
   mutating func decodeMessage<D: SwiftProtobuf.Decoder>(decoder: inout D) throws {
     while let fieldNumber = try decoder.nextFieldNumber() {
@@ -1578,12 +1558,7 @@ nonisolated extension Services_Jobs_GetGroupRequest: SwiftProtobuf.Message, Swif
       // enabled. https://github.com/apple/swift-protobuf/issues/1034
       switch fieldNumber {
       case 1: try { try decoder.decodeSingularInt64Field(value: &self.id) }()
-      case 2: try { try decoder.decodeSingularBoolField(value: &self.includeRules) }()
-      case 3: try { try decoder.decodeSingularBoolField(value: &self.includeLeaders) }()
-      case 4: try { try decoder.decodeSingularBoolField(value: &self.includeManualMembers) }()
-      case 5: try { try decoder.decodeSingularBoolField(value: &self.includeExclusions) }()
-      case 6: try { try decoder.decodeSingularBoolField(value: &self.includeResolvedMembers) }()
-      case 7: try { try decoder.decodeSingularBoolField(value: &self.includeArchived) }()
+      case 2: try { try decoder.decodeSingularBoolField(value: &self.includeArchived) }()
       default: break
       }
     }
@@ -1593,34 +1568,14 @@ nonisolated extension Services_Jobs_GetGroupRequest: SwiftProtobuf.Message, Swif
     if self.id != 0 {
       try visitor.visitSingularInt64Field(value: self.id, fieldNumber: 1)
     }
-    if self.includeRules != false {
-      try visitor.visitSingularBoolField(value: self.includeRules, fieldNumber: 2)
-    }
-    if self.includeLeaders != false {
-      try visitor.visitSingularBoolField(value: self.includeLeaders, fieldNumber: 3)
-    }
-    if self.includeManualMembers != false {
-      try visitor.visitSingularBoolField(value: self.includeManualMembers, fieldNumber: 4)
-    }
-    if self.includeExclusions != false {
-      try visitor.visitSingularBoolField(value: self.includeExclusions, fieldNumber: 5)
-    }
-    if self.includeResolvedMembers != false {
-      try visitor.visitSingularBoolField(value: self.includeResolvedMembers, fieldNumber: 6)
-    }
     if self.includeArchived != false {
-      try visitor.visitSingularBoolField(value: self.includeArchived, fieldNumber: 7)
+      try visitor.visitSingularBoolField(value: self.includeArchived, fieldNumber: 2)
     }
     try unknownFields.traverse(visitor: &visitor)
   }
 
   static func ==(lhs: Services_Jobs_GetGroupRequest, rhs: Services_Jobs_GetGroupRequest) -> Bool {
     if lhs.id != rhs.id {return false}
-    if lhs.includeRules != rhs.includeRules {return false}
-    if lhs.includeLeaders != rhs.includeLeaders {return false}
-    if lhs.includeManualMembers != rhs.includeManualMembers {return false}
-    if lhs.includeExclusions != rhs.includeExclusions {return false}
-    if lhs.includeResolvedMembers != rhs.includeResolvedMembers {return false}
     if lhs.includeArchived != rhs.includeArchived {return false}
     if lhs.unknownFields != rhs.unknownFields {return false}
     return true
@@ -1629,7 +1584,7 @@ nonisolated extension Services_Jobs_GetGroupRequest: SwiftProtobuf.Message, Swif
 
 nonisolated extension Services_Jobs_GetGroupResponse: SwiftProtobuf.Message, SwiftProtobuf._MessageImplementationBase, SwiftProtobuf._ProtoNameProviding {
   static let protoMessageName: String = _protobuf_package + ".GetGroupResponse"
-  static let _protobuf_nameMap = SwiftProtobuf._NameMap(bytecode: "\0\u{1}group\0\u{1}rules\0\u{1}leaders\0\u{3}manual_members\0\u{1}exclusions\0\u{3}resolved_members\0\u{1}access\0")
+  static let _protobuf_nameMap = SwiftProtobuf._NameMap(bytecode: "\0\u{1}group\0\u{1}access\0")
 
   mutating func decodeMessage<D: SwiftProtobuf.Decoder>(decoder: inout D) throws {
     while let fieldNumber = try decoder.nextFieldNumber() {
@@ -1638,12 +1593,7 @@ nonisolated extension Services_Jobs_GetGroupResponse: SwiftProtobuf.Message, Swi
       // enabled. https://github.com/apple/swift-protobuf/issues/1034
       switch fieldNumber {
       case 1: try { try decoder.decodeSingularMessageField(value: &self._group) }()
-      case 2: try { try decoder.decodeRepeatedMessageField(value: &self.rules) }()
-      case 3: try { try decoder.decodeRepeatedMessageField(value: &self.leaders) }()
-      case 4: try { try decoder.decodeRepeatedMessageField(value: &self.manualMembers) }()
-      case 5: try { try decoder.decodeRepeatedMessageField(value: &self.exclusions) }()
-      case 6: try { try decoder.decodeRepeatedMessageField(value: &self.resolvedMembers) }()
-      case 7: try { try decoder.decodeSingularMessageField(value: &self._access) }()
+      case 2: try { try decoder.decodeSingularMessageField(value: &self._access) }()
       default: break
       }
     }
@@ -1657,34 +1607,14 @@ nonisolated extension Services_Jobs_GetGroupResponse: SwiftProtobuf.Message, Swi
     try { if let v = self._group {
       try visitor.visitSingularMessageField(value: v, fieldNumber: 1)
     } }()
-    if !self.rules.isEmpty {
-      try visitor.visitRepeatedMessageField(value: self.rules, fieldNumber: 2)
-    }
-    if !self.leaders.isEmpty {
-      try visitor.visitRepeatedMessageField(value: self.leaders, fieldNumber: 3)
-    }
-    if !self.manualMembers.isEmpty {
-      try visitor.visitRepeatedMessageField(value: self.manualMembers, fieldNumber: 4)
-    }
-    if !self.exclusions.isEmpty {
-      try visitor.visitRepeatedMessageField(value: self.exclusions, fieldNumber: 5)
-    }
-    if !self.resolvedMembers.isEmpty {
-      try visitor.visitRepeatedMessageField(value: self.resolvedMembers, fieldNumber: 6)
-    }
     try { if let v = self._access {
-      try visitor.visitSingularMessageField(value: v, fieldNumber: 7)
+      try visitor.visitSingularMessageField(value: v, fieldNumber: 2)
     } }()
     try unknownFields.traverse(visitor: &visitor)
   }
 
   static func ==(lhs: Services_Jobs_GetGroupResponse, rhs: Services_Jobs_GetGroupResponse) -> Bool {
     if lhs._group != rhs._group {return false}
-    if lhs.rules != rhs.rules {return false}
-    if lhs.leaders != rhs.leaders {return false}
-    if lhs.manualMembers != rhs.manualMembers {return false}
-    if lhs.exclusions != rhs.exclusions {return false}
-    if lhs.resolvedMembers != rhs.resolvedMembers {return false}
     if lhs._access != rhs._access {return false}
     if lhs.unknownFields != rhs.unknownFields {return false}
     return true

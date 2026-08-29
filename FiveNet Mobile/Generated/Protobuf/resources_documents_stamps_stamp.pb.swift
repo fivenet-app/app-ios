@@ -38,48 +38,6 @@ fileprivate nonisolated struct _GeneratedWithProtocGenSwiftVersion: SwiftProtobu
   typealias Version = _2
 }
 
-nonisolated enum Resources_Documents_Stamps_StampAccessLevel: SwiftProtobuf.Enum, Swift.CaseIterable {
-  typealias RawValue = Int
-  case unspecified // = 0
-  case blocked // = 1
-  case use // = 2
-  case manage // = 3
-  case UNRECOGNIZED(Int)
-
-  init() {
-    self = .unspecified
-  }
-
-  init?(rawValue: Int) {
-    switch rawValue {
-    case 0: self = .unspecified
-    case 1: self = .blocked
-    case 2: self = .use
-    case 3: self = .manage
-    default: self = .UNRECOGNIZED(rawValue)
-    }
-  }
-
-  var rawValue: Int {
-    switch self {
-    case .unspecified: return 0
-    case .blocked: return 1
-    case .use: return 2
-    case .manage: return 3
-    case .UNRECOGNIZED(let i): return i
-    }
-  }
-
-  // The compiler won't synthesize support with the UNRECOGNIZED case.
-  static let allCases: [Resources_Documents_Stamps_StampAccessLevel] = [
-    .unspecified,
-    .blocked,
-    .use,
-    .manage,
-  ]
-
-}
-
 nonisolated struct Resources_Documents_Stamps_Stamp: Sendable {
   // SwiftProtobuf.Message conformance is added in an extension below. See the
   // `Message` and `Message+*Additions` files in the SwiftProtobuf library for
@@ -153,10 +111,6 @@ nonisolated struct Resources_Documents_Stamps_Stamp: Sendable {
 // MARK: - Code below here is support for the SwiftProtobuf runtime.
 
 fileprivate nonisolated let _protobuf_package = "resources.documents.stamps"
-
-nonisolated extension Resources_Documents_Stamps_StampAccessLevel: SwiftProtobuf._ProtoNameProviding {
-  static let _protobuf_nameMap = SwiftProtobuf._NameMap(bytecode: "\0\u{2}\0STAMP_ACCESS_LEVEL_UNSPECIFIED\0\u{1}STAMP_ACCESS_LEVEL_BLOCKED\0\u{1}STAMP_ACCESS_LEVEL_USE\0\u{1}STAMP_ACCESS_LEVEL_MANAGE\0")
-}
 
 nonisolated extension Resources_Documents_Stamps_Stamp: SwiftProtobuf.Message, SwiftProtobuf._MessageImplementationBase, SwiftProtobuf._ProtoNameProviding {
   static let protoMessageName: String = _protobuf_package + ".Stamp"

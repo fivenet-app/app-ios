@@ -18,6 +18,10 @@ enum LiveMapRoute: Hashable {
 }
 
 struct LiveMapView: View {
+    /// Names the map viewport coordinate space in which the interactive
+    /// control frames (zoom/menu) are measured for the tap hit-test.
+    private static let mapControlFrameSpace = "mapViewport"
+
     @Environment(AppState.self) private var appState
 
     private enum ViewMode: String, CaseIterable, Identifiable {
@@ -60,8 +64,12 @@ struct LiveMapView: View {
     @AppStorage("livemapShowHeatmap") private var showHeatmap = false
     @State private var heatmapEntries: [Resources_Livemap_Heatmap_HeatmapEntry] = []
     @State private var longPressPosition: CGPoint?
-    @State private var longPressStartLocation: CGPoint?
+    @State private var markerPosition: CGPoint?
+    @State private var touchStartLocation: CGPoint?
+    @State private var didLongPress = false
     @State private var showCreateDispatchSheet = false
+    @State private var showCreateMarkerSheet = false
+    @State private var mapControlFrames: [CGRect] = []
 
     init(initialTab: QuickAccessTab? = nil) {
         if let initialTab {
@@ -112,6 +120,9 @@ struct LiveMapView: View {
         }
         .sheet(isPresented: $showCreateDispatchSheet) {
             CreateDispatchSheet(presetPosition: longPressPosition)
+        }
+        .sheet(isPresented: $showCreateMarkerSheet) {
+            CreateMarkerSheet(position: markerPosition ?? .zero)
         }
         .task {
             if let baseURL = appState.client?.baseURL {
@@ -211,19 +222,23 @@ struct LiveMapView: View {
                 }
 
                 mapMenu
-                    .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .topTrailing)
                     .padding()
+                    .background(mapControlFrameReader)
+                    .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .topTrailing)
 
                 zoomControls
-                    .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .bottomTrailing)
                     .padding()
+                    .background(mapControlFrameReader)
+                    .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .bottomTrailing)
             }
             .animation(.easeOut(duration: 0.2), value: mapZoom)
             .clipped()
             .contentShape(Rectangle())
+            .coordinateSpace(name: Self.mapControlFrameSpace)
+            .onPreferenceChange(MapControlFramesPreferenceKey.self) { mapControlFrames = $0 }
             .gesture(dragGesture)
             .simultaneousGesture(magnifyGesture)
-            .simultaneousGesture(longPressGesture(viewportOrigin: viewportOrigin))
+            .simultaneousGesture(tapAndLongPressGesture(viewportOrigin: viewportOrigin))
         }
         .ignoresSafeArea(edges: .bottom)
     }
@@ -297,27 +312,156 @@ struct LiveMapView: View {
             }
     }
 
-    /// Long-press on the map opens the "Einsatz erstellen" sheet with the
-    /// tapped position prefilled — after the hold-timeout (0,5 s), while the
-    /// finger is still down. Location is captured by a simultaneous zero-
-    /// distance drag (a bare `LongPressGesture` has no location).
-    private func longPressGesture(viewportOrigin: CGPoint) -> some Gesture {
-        DragGesture(minimumDistance: 0)
-            .onChanged { value in
-                longPressStartLocation = value.startLocation
+    /// Map gestures on empty ground (taps on markers are consumed by their own
+/// handlers):
+/// - Simple tap → "Einsatz erstellen" sheet at the tapped position.
+/// - Long-press → "Markierung erstellen" sheet at the held position, only when
+///   the character has the Livemap marker creation permission.
+/// The location is captured by a simultaneous zero-distance drag
+/// (a bare `TapGesture`/`LongPressGesture` has no location).
+private func tapAndLongPressGesture(viewportOrigin: CGPoint) -> some Gesture {
+    DragGesture(minimumDistance: 0)
+        .onChanged { value in
+            if touchStartLocation != value.startLocation {
+                // A new touch begins: reset the long-press state so a previous
+                // hold does not leak into this gesture.
+                didLongPress = false
+                touchStartLocation = value.startLocation
             }
-            .simultaneously(with: LongPressGesture(minimumDuration: 0.5)
-                .onEnded { _ in
-                    guard let start = longPressStartLocation else { return }
-                    let viewPoint = CGPoint(
-                        x: start.x + viewportOrigin.x,
-                        y: start.y + viewportOrigin.y
-                    )
-                    let gamePoint = MapProjection.unproject(viewPoint, zoom: mapZoom)
-                    longPressPosition = clampCenter(gamePoint)
-                    showCreateDispatchSheet = true
-                }
+        }
+        .onEnded { value in
+            // A tap: no real panning movement and no long-press happened.
+            guard abs(value.translation.width) < 8, abs(value.translation.height) < 8,
+                  !didLongPress,
+                  let start = touchStartLocation,
+                  !isOverMapControls(start),
+                  !isOverAnyMarker(gamePoint: gamePoint(from: start, viewportOrigin: viewportOrigin), viewportOrigin: viewportOrigin)
+            else { return }
+            longPressPosition = gamePoint(from: start, viewportOrigin: viewportOrigin)
+            showCreateDispatchSheet = true
+        }
+        .simultaneously(with: LongPressGesture(minimumDuration: 0.5)
+            .onEnded { _ in
+                handleMapLongPress(viewportOrigin: viewportOrigin)
+            })
+    }
+
+    /// Long-press creates a marker marker (zone/shape) on empty ground,
+    /// gated by the `CreateOrUpdateMarker` permission.
+    private func handleMapLongPress(viewportOrigin: CGPoint) {
+        guard canCreateMarkers,
+              let start = touchStartLocation,
+              !isOverMapControls(start),
+              !isOverAnyMarker(gamePoint: gamePoint(from: start, viewportOrigin: viewportOrigin), viewportOrigin: viewportOrigin)
+        else { return }
+        didLongPress = true
+        markerPosition = gamePoint(from: start, viewportOrigin: viewportOrigin)
+        showCreateMarkerSheet = true
+    }
+
+    /// Whether the character may create marker markers on the livemap.
+    private var canCreateMarkers: Bool {
+        appState.can("livemap.LivemapService/CreateOrUpdateMarker")
+    }
+
+    /// Maps a view-space point (= the touch location relative to the map
+    /// ZStack) to the clamped game-space point.
+    private func gamePoint(from viewPoint: CGPoint, viewportOrigin: CGPoint) -> CGPoint {
+        let pixel = CGPoint(x: viewPoint.x + viewportOrigin.x, y: viewPoint.y + viewportOrigin.y)
+        return clampCenter(MapProjection.unproject(pixel, zoom: mapZoom))
+    }
+
+    /// Whether a view-space point lies on the map's interactive controls
+    /// (zoom buttons / map menu). The tap & long-press map actions must not
+    /// fire when the user is actually pressing one of those.
+    private func isOverMapControls(_ point: CGPoint) -> Bool {
+        mapControlFrames.contains { $0.insetBy(dx: -4, dy: -4).contains(point) }
+    }
+
+    /// Records a control's frame (in `mapControlFrameSpace`) so the map tap
+    /// gesture can be suppressed there.
+    private var mapControlFrameReader: some View {
+        GeometryReader { geo in
+            Color.clear.preference(
+                key: MapControlFramesPreferenceKey.self,
+                value: [geo.frame(in: .named(Self.mapControlFrameSpace))]
             )
+        }
+    }
+
+    /// Whether a game-space point lies on a rendered marker (dispatch,
+    /// colleague/user or marker marker). Map actions only fire on empty ground.
+    private func isOverAnyMarker(gamePoint: CGPoint, viewportOrigin: CGPoint) -> Bool {
+        let viewPoint = toView(gamePoint, viewportOrigin: viewportOrigin)
+
+        for marker in appState.livemapMarkers {
+            if distance(toView(CGPoint(x: marker.x, y: marker.y), viewportOrigin: viewportOrigin), viewPoint) < 20 {
+                return true
+            }
+        }
+        for dispatch in positionedDispatches {
+            if distance(toView(CGPoint(x: dispatch.x, y: dispatch.y), viewportOrigin: viewportOrigin), viewPoint) < 24 {
+                return true
+            }
+        }
+        for marker in appState.livemapMarkerMarkers {
+            if markerHitTest(marker, viewPoint: viewPoint, viewportOrigin: viewportOrigin) {
+                return true
+            }
+        }
+        return false
+    }
+
+    /// Hit-tests a marker marker against a view-space point, mirroring the
+    /// rendered shapes (`markerMarkerShape`).
+    private func markerHitTest(_ marker: Resources_Livemap_Markers_MarkerMarker, viewPoint: CGPoint, viewportOrigin: CGPoint) -> Bool {
+        let anchor = toView(CGPoint(x: marker.x, y: marker.y), viewportOrigin: viewportOrigin)
+        switch marker.type {
+        case .dot:
+            return distance(anchor, viewPoint) < 12
+        case .circle:
+            guard marker.hasData, let data = marker.data.data, case .circle(let circle) = data else { return false }
+            let radius = max(4, CGFloat(circle.radius) * unitsToPixels)
+            return distance(anchor, viewPoint) < radius + 2
+        case .icon:
+            return distance(anchor, viewPoint) < 24
+        case .rectangle:
+            guard marker.hasData, let data = marker.data.data, case .rectangle(let rectangle) = data else { return false }
+            let end = toView(CGPoint(x: rectangle.endX, y: rectangle.endY), viewportOrigin: viewportOrigin)
+            return viewPoint.x >= min(anchor.x, end.x) && viewPoint.x <= max(anchor.x, end.x)
+                && viewPoint.y >= min(anchor.y, end.y) && viewPoint.y <= max(anchor.y, end.y)
+        case .polygon:
+            let points = shapePoints(marker).map { toView($0, viewportOrigin: viewportOrigin) }
+            guard points.count >= 3 else { return false }
+            return path(for: points, closed: true).contains(viewPoint)
+        case .polyline:
+            let points = shapePoints(marker).map { toView($0, viewportOrigin: viewportOrigin) }
+            return distanceToPolyline(viewPoint, points) < 12
+        case .unspecified, .UNRECOGNIZED:
+            return false
+        }
+    }
+
+    private func distance(_ a: CGPoint, _ b: CGPoint) -> CGFloat {
+        hypot(a.x - b.x, a.y - b.y)
+    }
+
+    private func distanceToPolyline(_ point: CGPoint, _ points: [CGPoint]) -> CGFloat {
+        guard points.count >= 2 else { return .greatestFiniteMagnitude }
+        var best = CGFloat.greatestFiniteMagnitude
+        for index in 0..<(points.count - 1) {
+            best = min(best, distanceToSegment(point, points[index], points[index + 1]))
+        }
+        return best
+    }
+
+    private func distanceToSegment(_ point: CGPoint, _ a: CGPoint, _ b: CGPoint) -> CGFloat {
+        let dx = b.x - a.x
+        let dy = b.y - a.y
+        let lengthSquared = dx * dx + dy * dy
+        guard lengthSquared > 0 else { return distance(point, a) }
+        let t = max(0, min(1, ((point.x - a.x) * dx + (point.y - a.y) * dy) / lengthSquared))
+        return distance(point, CGPoint(x: a.x + t * dx, y: a.y + t * dy))
     }
 
     private func zoomBy(_ delta: Int) {
@@ -447,6 +591,15 @@ struct LiveMapView: View {
                     .frame(width: radius * 2, height: radius * 2)
                     .contentShape(Circle())
                     .onTapGesture { selectedMarker = marker }
+                    .overlay {
+                        if marker.data.circle.blink {
+                            // Overlay VOR .position: Der Blip wird so am
+                            // Kreiszentrum zentriert (Overlay legt sich auf den
+                            // radius^2-Rahmen). Hinter .position läge er im
+                            // full-size-Container und wäre markierzentriert.
+                            BlinkMarkerBlipView(color: color, zoom: mapZoom)
+                        }
+                    }
                     .position(x: anchor.x, y: anchor.y)
             }
         case .icon:
@@ -810,12 +963,81 @@ struct LiveMapView: View {
 
 // MARK: - Marker marker details
 
+/// Radar-style pulse for "blinking" circle markers, mirroring the web
+/// `MarkerBlinkBlip.vue`: three fixed concentric rings that flash in sequence,
+/// with a slight per-ring stagger (delayed phase). Ring size scales down when
+/// the map is below the base zoom, exactly like the web power law (but clamped
+/// to a small visible minimum so the pulse stays noticeable on our low default
+/// zoom).
+private struct BlinkMarkerBlipView: View {
+    let color: Color
+    let zoom: Int
+
+    private let ringSizes: [CGFloat] = [64, 80, 96]
+    private let ringWidth: CGFloat = 4
+    private let pulseDuration: Double = 2.0
+    private let pulseDelay: Double = 0.45
+    private let baseZoom: Int = 5
+
+    /// The rings scale with the zoom level exactly like the zone circle does
+    /// (`2^(zoom − baseZoom)`), so the outermost ring always sits on the zone
+    /// edge at every zoom step (web keeps a fixed 64–96 px decorative blip and
+    /// only shrinks it below baseZoom 5 — on the app that made the pulse too
+    /// big at low zooms and too small from zoom 6 on; per user feedback the
+    /// halo now tracks the marker). The stroke shrinks/grows with the same
+    /// factor (web applies it as a CSS `transform` that includes the border).
+    private var scaleFactor: CGFloat {
+        pow(2.0, Double(zoom - baseZoom))
+    }
+
+    var body: some View {
+        TimelineView(.periodic(from: .now, by: 1.0 / 60.0)) { context in
+            let now = context.date.timeIntervalSinceReferenceDate
+            ZStack {
+                ForEach(Array(ringSizes.enumerated()), id: \.offset) { index, size in
+                    let phase = (now + Double(index) * pulseDelay)
+                        .truncatingRemainder(dividingBy: pulseDuration)
+                        / pulseDuration
+                    Circle()
+                        .stroke(color, lineWidth: ringWidth * scaleFactor)
+                        .frame(width: size * scaleFactor, height: size * scaleFactor)
+                        .opacity(blipOpacity(for: phase))
+                }
+            }
+        }
+        .allowsHitTesting(false)
+    }
+
+    /// Web keyframes: 0 %→0.18, 6 %→1.0, 12 %→0.68, 18 %→0.24, 100 %→0.18
+    /// (linear between the points, easing back before the loop restarts).
+    private func blipOpacity(for phase: Double) -> Double {
+        switch phase {
+        case 0.0...0.06:
+            return 0.18 + (1.0 - 0.18) * (phase / 0.06)
+        case 0.06...0.12:
+            return 1.0 - (1.0 - 0.68) * ((phase - 0.06) / 0.06)
+        case 0.12...0.18:
+            return 0.68 - (0.68 - 0.24) * ((phase - 0.12) / 0.06)
+        default:
+            return 0.24 + (0.18 - 0.24) * ((phase - 0.18) / 0.82)
+        }
+    }
+}
+
 /// Detail sheet for a marker marker (zone/area): name, description, expiry and
-/// creator.
+/// creator. Mirrors the web `MarkerMarkerPopup`: edit is offered when the
+/// `CreateOrUpdateMarker` permission + Access attribute allow it, delete when
+/// the `DeleteMarker` permission + public-marker rules pass.
 private struct MarkerMarkerDetailSheet: View {
     @Environment(\.dismiss) private var dismiss
+    @Environment(AppState.self) private var appState
 
     let marker: Resources_Livemap_Markers_MarkerMarker
+
+    @State private var showEditor = false
+    @State private var showDeleteConfirm = false
+    @State private var isDeleting = false
+    @State private var errorMessage: String?
 
     var body: some View {
         NavigationStack {
@@ -854,12 +1076,132 @@ private struct MarkerMarkerDetailSheet: View {
             .navigationTitle("Markierung")
             .navigationBarTitleDisplayMode(.inline)
             .toolbar {
+                ToolbarItemGroup(placement: .topBarTrailing) {
+                    if isMarkerEditableShape, canEdit {
+                        Button {
+                            showEditor = true
+                        } label: {
+                            Label("Bearbeiten", systemImage: "pencil")
+                        }
+                    }
+                    if canDelete {
+                        Button(role: .destructive) {
+                            showDeleteConfirm = true
+                        } label: {
+                            Label("Löschen", systemImage: "trash")
+                        }
+                    }
+                }
                 ToolbarItem(placement: .confirmationAction) {
                     Button("Fertig") { dismiss() }
                 }
             }
+            .sheet(isPresented: $showEditor) {
+                CreateMarkerSheet(
+                    position: CGPoint(x: marker.x, y: marker.y),
+                    marker: marker
+                )
+            }
+            .confirmationDialog(
+                "Markierung löschen?",
+                isPresented: $showDeleteConfirm,
+                titleVisibility: .visible
+            ) {
+                Button("Löschen", role: .destructive) {
+                    Task { await performDelete() }
+                }
+                Button("Abbrechen", role: .cancel) {}
+            } message: {
+                Text("Die Markierung „\(marker.name)“ wird endgültig gelöscht.")
+            }
+            .alert("Fehler", isPresented: isErrorPresented) {
+                Button("OK", role: .cancel) {}
+            } message: {
+                Text(errorMessage ?? "Unbekannter Fehler")
+            }
         }
         .presentationDetents([.medium, .large])
+    }
+
+    // MARK: Access gates (mirror the web MarkerMarkerPopup + helpers.ts)
+
+    /// The editor only supports circle/icon markers; other shapes keep their
+    /// tap-only detail sheet (no destructive type change).
+    private var isMarkerEditableShape: Bool {
+        marker.type == .circle || marker.type == .icon
+    }
+
+    private var markerIsPublic: Bool {
+        marker.hasPublic && marker.public
+    }
+
+    private var markerCreatorIsMe: Bool {
+        let me = appState.activeCharacterUserID
+        if marker.hasCreatorID && marker.creatorID == me { return true }
+        if marker.hasCreator && marker.creator.userID == me { return true }
+        return false
+    }
+
+    /// Web `canMutatePublicMarker`: non-public markers are always mutable,
+    /// public ones only for superusers or members of the marker's own job.
+    private var canMutatePublicMarker: Bool {
+        if !markerIsPublic { return true }
+        if appState.isSuperuser { return true }
+        guard let job = appState.character?.job, !job.isEmpty else { return false }
+        return marker.job == job
+    }
+
+    /// Web `checkIfCanEditMarker` against the `Access` attribute (empty list
+    /// means creator-only, mirroring the server's `CheckIfHasOwnJobAccess`).
+    private var canEdit: Bool {
+        guard appState.can("livemap.LivemapService/CreateOrUpdateMarker") else { return false }
+        guard canMutatePublicMarker else { return false }
+        if appState.isSuperuser { return true }
+        guard marker.hasCreator else { return false }
+
+        let fields = appState.attrStringList("livemap.LivemapService/CreateOrUpdateMarker", key: "Access")
+        if fields.isEmpty { return markerCreatorIsMe }
+        if fields.contains("Any") { return true }
+        if fields.contains("Lower_Rank"), let creator = marker.creatorOrNil {
+            if creator.jobGrade < (appState.character?.jobGrade ?? 0) { return true }
+        }
+        if fields.contains("Same_Rank"), let creator = marker.creatorOrNil {
+            if creator.jobGrade <= (appState.character?.jobGrade ?? 0) { return true }
+        }
+        if fields.contains("Own") { return markerCreatorIsMe }
+        return false
+    }
+
+    /// Web `canDeletePublicMarker`: non-public markers are always deletable,
+    /// public ones need `Own` on the creator or `Any` within the marker's job.
+    private var canDelete: Bool {
+        guard appState.can("livemap.LivemapService/DeleteMarker") else { return false }
+        if !markerIsPublic { return true }
+        if appState.isSuperuser { return true }
+
+        let fields = appState.attrStringList("livemap.LivemapService/DeleteMarker", key: "Access")
+        if fields.contains("Own"), markerCreatorIsMe { return true }
+        guard let job = appState.character?.job, !job.isEmpty else { return false }
+        return marker.job == job && fields.contains("Any")
+    }
+
+    private var isErrorPresented: Binding<Bool> {
+        Binding(get: { errorMessage != nil }, set: { newValue in
+            if !newValue { errorMessage = nil }
+        })
+    }
+
+    private func performDelete() async {
+        guard !isDeleting else { return }
+        isDeleting = true
+        errorMessage = nil
+        do {
+            try await appState.deleteMarker(id: marker.id)
+            dismiss()
+        } catch {
+            errorMessage = error.localizedDescription
+        }
+        isDeleting = false
     }
 
     private var markerColor: Color {
@@ -907,6 +1249,19 @@ extension Resources_Livemap_Markers_MarkerMarker {
     /// Convenience expiry accessor.
     var expiry: Resources_Timestamp_Timestamp? {
         hasExpiresAt ? expiresAt : nil
+    }
+
+    /// Convenience whether a creator is present, unwrapping the accessor the
+    /// generated type stores.
+    var creatorOrNil: Resources_Users_Short_UserShort? {
+        hasCreator ? creator : nil
+    }
+}
+
+private struct MapControlFramesPreferenceKey: PreferenceKey {
+    static let defaultValue: [CGRect] = []
+    static func reduce(value: inout [CGRect], nextValue: () -> [CGRect]) {
+        value.append(contentsOf: nextValue())
     }
 }
 

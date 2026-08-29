@@ -309,9 +309,11 @@ struct GroupRow: View {
                     .lineLimit(2)
                 HStack(spacing: Theme.Spacing.md) {
                     Label(group.type.label, systemImage: group.type.icon)
+                        .labelStyle(CompactLabelStyle())
                         .font(Theme.Typography.caption)
                         .foregroundStyle(group.type.tint)
                     Label(group.membershipMode.label, systemImage: group.membershipMode.icon)
+                        .labelStyle(CompactLabelStyle())
                         .font(Theme.Typography.caption)
                         .foregroundStyle(group.membershipMode.tint)
                     Spacer()
@@ -331,6 +333,12 @@ struct GroupRow: View {
             CardChevron()
         }
         .padding(.vertical, Theme.Spacing.xs)
+        .padding(Theme.Spacing.md)
+        .background(
+            Theme.Palette.surface,
+            in: RoundedRectangle(cornerRadius: Theme.Radius.lg, style: .continuous)
+        )
+        .shadow(color: .black.opacity(0.04), radius: 6, y: 2)
     }
 }
 

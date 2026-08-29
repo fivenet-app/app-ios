@@ -97,11 +97,7 @@ struct ColleaguesStatsView: View {
                     Section {
                         SectionCard {
                             VStack(alignment: .leading, spacing: Theme.Spacing.sm) {
-                                HStack(spacing: Theme.Spacing.sm) {
-                                    Label("Kollegen", systemImage: "square.fill")
-                                        .foregroundStyle(Theme.Palette.accent)
-                                    Label("Abwesend", systemImage: "square.fill")
-                                        .foregroundStyle(Theme.Palette.warning)
+                                HStack {
                                     Spacer()
                                     Menu {
                                         ForEach(Self.presetRanges, id: \.self) { days in
@@ -114,7 +110,6 @@ struct ColleaguesStatsView: View {
                                             .font(.subheadline)
                                     }
                                 }
-                                .font(.caption.weight(.semibold))
 
                                 StatsBarChart(data: chartData)
                                     .frame(height: 180)
@@ -246,46 +241,92 @@ private struct StatsDataPoint {
     var absent: Double
 }
 
-/// Einfaches Balken-Diagramm: amount-Balken (accent) mit dünnem
-/// vacation-Overlay (warning) je Aggregations-Bucket.
+/// Balken-Diagramm wie im Web (`Chart.client.vue`, Unovis `VisGroupedBar`):
+/// amount-Balken (primary, volle Opazität) mit darüberliegendem vacation-Overlay
+/// (warning, 10 %) je Aggregations-Bucket. Balkenbreite auf `min(barWidth,
+/// Containerbreite)` gedeckelt und je Spalte zentriert (`bandPaddingInner`),
+/// nur x-Achse mit einem Datums-Label pro Bucket im de-Locale. Keine y-Achse,
+/// Gridlines, Wert-Marker oder Legende (Web-treu).
 private struct StatsBarChart: View {
     let data: [StatsDataPoint]
 
-    private var maxAmount: Double {
-        max(data.map(\.amount).max() ?? 0, 1)
+    /// Gemeinsame Skala über alle Reihen (amount + vacation), wie Unovis es für
+    /// die im selben Container liegenden Bar-Serien berechnet.
+    private var plotMax: Double {
+        max(
+            data.map(\.amount).max() ?? 0,
+            data.map(\.vacation).max() ?? 0,
+            1
+        )
     }
 
     var body: some View {
-        let stride = max(1, Int(ceil(Double(data.count) / 14.0)))
-        HStack(alignment: .bottom, spacing: 2) {
-            ForEach(data.indices, id: \.self) { index in
-                let point = data[index]
-                VStack(spacing: 3) {
-                    GeometryReader { geo in
-                        ZStack(alignment: .bottom) {
-                            RoundedRectangle(cornerRadius: 2, style: .continuous)
-                                .fill(Theme.Palette.warning.opacity(0.15))
-                                .frame(height: max(2, geo.size.height * CGFloat(point.vacation / maxAmount)))
-                            RoundedRectangle(cornerRadius: 2, style: .continuous)
-                                .fill(Theme.Palette.accent)
-                                .frame(height: max(2, geo.size.height * CGFloat(point.amount / maxAmount)))
+        GeometryReader { proxy in
+            VStack(alignment: .leading, spacing: Self.axisStackSpacing) {
+                ZStack(alignment: .bottom) {
+                    HStack(alignment: .bottom, spacing: Self.barSpacing) {
+                        ForEach(data.indices, id: \.self) { index in
+                            barColumn(point: data[index], width: min(Self.barWidth, proxy.size.width))
                         }
                     }
-                    .frame(maxHeight: .infinity)
 
-                    Text(index.isMultiple(of: stride) || index == data.count - 1 ? Self.xLabel(point.date) : " ")
-                        .font(.caption2)
-                        .foregroundStyle(.secondary)
-                        .lineLimit(1)
-                        .fixedSize(horizontal: true, vertical: false)
+                    Rectangle()
+                        .fill(Color(.separator).opacity(0.35))
+                        .frame(maxWidth: .infinity)
+                        .frame(height: 1)
                 }
+                .frame(maxWidth: .infinity, maxHeight: Self.plotHeight, alignment: .bottom)
+
+                xAxisLabels
+            }
+        }
+        .frame(height: Self.plotHeight + Self.axisStackSpacing)
+    }
+
+    private static let plotHeight: CGFloat = 170
+    private static let barWidth: CGFloat = 30
+    private static let barSpacing: CGFloat = 4
+    private static let axisStackSpacing: CGFloat = Theme.Spacing.sm
+
+    /// Balken klebt von unten, vacation-Wash darüber (warning, 10 % — Web `:opacity="0.1"`).
+    private func barColumn(point: StatsDataPoint, width: CGFloat) -> some View {
+        let height = Self.plotHeight * CGFloat(point.amount / plotMax)
+        let vacationHeight = Self.plotHeight * CGFloat(point.vacation / plotMax)
+        return ZStack(alignment: .bottom) {
+            RoundedRectangle(cornerRadius: 3, style: .continuous)
+                .fill(Theme.Palette.warning.opacity(0.1))
+                .frame(width: width, height: vacationHeight)
+            RoundedRectangle(cornerRadius: 3, style: .continuous)
+                .fill(Theme.Palette.accent)
+                .frame(width: width, height: height)
+        }
+        .frame(maxWidth: .infinity, maxHeight: Self.plotHeight, alignment: .bottom)
+    }
+
+    private var xAxisLabels: some View {
+        let stride = Self.xLabelStride(count: data.count)
+        return HStack(spacing: 0) {
+            ForEach(data.indices, id: \.self) { index in
+                Text(index.isMultiple(of: stride) || index == data.count - 1 ? Self.xLabel(data[index].date) : " ")
+                    .font(.caption2)
+                    .foregroundStyle(.secondary)
+                    .lineLimit(1)
+                    .minimumScaleFactor(0.7)
+                    .frame(maxWidth: .infinity)
             }
         }
     }
 
-    /// X-Achsen-Label: Datum je Aggregations-Granularität.
+    /// Label-Abstand, damit die vollen `dd.MM.yyyy`-Labels nicht überlappen
+    /// (Web zeigt pro Bucket ein Label, Unovis überspringt kollidierende automatisch).
+    private static func xLabelStride(count: Int) -> Int {
+        guard count > 1 else { return 1 }
+        return max(1, Int(ceil(Double(count) / 6.0)))
+    }
+
+    /// Web `d(date, 'date')` → de-Locale `dd.MM.yyyy`.
     private static func xLabel(_ date: Date) -> String {
-        date.formatted(.dateTime.day().month(.twoDigits))
+        date.formatted(.dateTime.day(.twoDigits).month(.twoDigits).year())
     }
 }
 

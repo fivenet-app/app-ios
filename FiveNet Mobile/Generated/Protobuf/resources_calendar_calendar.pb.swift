@@ -156,6 +156,15 @@ nonisolated struct Resources_Calendar_Calendar: @unchecked Sendable {
     set {_uniqueStorage()._color = newValue}
   }
 
+  var icon: String {
+    get {_storage._icon ?? String()}
+    set {_uniqueStorage()._icon = newValue}
+  }
+  /// Returns true if `icon` has been explicitly set.
+  var hasIcon: Bool {_storage._icon != nil}
+  /// Clears the value of `icon`. Subsequent reads from it will return its default value.
+  mutating func clearIcon() {_uniqueStorage()._icon = nil}
+
   var creatorID: Int32 {
     get {_storage._creatorID ?? 0}
     set {_uniqueStorage()._creatorID = newValue}
@@ -445,7 +454,7 @@ nonisolated extension Resources_Calendar_CalendarSystemKind: SwiftProtobuf._Prot
 
 nonisolated extension Resources_Calendar_Calendar: SwiftProtobuf.Message, SwiftProtobuf._MessageImplementationBase, SwiftProtobuf._ProtoNameProviding {
   static let protoMessageName: String = _protobuf_package + ".Calendar"
-  static let _protobuf_nameMap = SwiftProtobuf._NameMap(bytecode: "\0\u{1}id\0\u{3}created_at\0\u{3}updated_at\0\u{3}deleted_at\0\u{1}job\0\u{1}name\0\u{1}description\0\u{1}public\0\u{1}closed\0\u{1}color\0\u{3}creator_id\0\u{1}creator\0\u{3}creator_job\0\u{1}subscription\0\u{1}access\0\u{3}system_kind\0\u{3}discord_settings\0")
+  static let _protobuf_nameMap = SwiftProtobuf._NameMap(bytecode: "\0\u{1}id\0\u{3}created_at\0\u{3}updated_at\0\u{3}deleted_at\0\u{1}job\0\u{1}name\0\u{1}description\0\u{1}public\0\u{1}closed\0\u{1}color\0\u{3}creator_id\0\u{1}creator\0\u{3}creator_job\0\u{1}subscription\0\u{1}access\0\u{3}system_kind\0\u{3}discord_settings\0\u{1}icon\0")
 
   fileprivate class _StorageClass {
     var _id: Int64 = 0
@@ -459,6 +468,7 @@ nonisolated extension Resources_Calendar_Calendar: SwiftProtobuf.Message, SwiftP
     var _public: Bool = false
     var _closed: Bool = false
     var _color: String = String()
+    var _icon: String? = nil
     var _creatorID: Int32? = nil
     var _creator: Resources_Users_Short_UserShort? = nil
     var _creatorJob: String = String()
@@ -486,6 +496,7 @@ nonisolated extension Resources_Calendar_Calendar: SwiftProtobuf.Message, SwiftP
       _public = source._public
       _closed = source._closed
       _color = source._color
+      _icon = source._icon
       _creatorID = source._creatorID
       _creator = source._creator
       _creatorJob = source._creatorJob
@@ -527,6 +538,7 @@ nonisolated extension Resources_Calendar_Calendar: SwiftProtobuf.Message, SwiftP
         case 15: try { try decoder.decodeSingularMessageField(value: &_storage._access) }()
         case 16: try { try decoder.decodeSingularEnumField(value: &_storage._systemKind) }()
         case 17: try { try decoder.decodeSingularMessageField(value: &_storage._discordSettings) }()
+        case 18: try { try decoder.decodeSingularStringField(value: &_storage._icon) }()
         default: break
         }
       }
@@ -590,6 +602,9 @@ nonisolated extension Resources_Calendar_Calendar: SwiftProtobuf.Message, SwiftP
       try { if let v = _storage._discordSettings {
         try visitor.visitSingularMessageField(value: v, fieldNumber: 17)
       } }()
+      try { if let v = _storage._icon {
+        try visitor.visitSingularStringField(value: v, fieldNumber: 18)
+      } }()
     }
     try unknownFields.traverse(visitor: &visitor)
   }
@@ -610,6 +625,7 @@ nonisolated extension Resources_Calendar_Calendar: SwiftProtobuf.Message, SwiftP
         if _storage._public != rhs_storage._public {return false}
         if _storage._closed != rhs_storage._closed {return false}
         if _storage._color != rhs_storage._color {return false}
+        if _storage._icon != rhs_storage._icon {return false}
         if _storage._creatorID != rhs_storage._creatorID {return false}
         if _storage._creator != rhs_storage._creator {return false}
         if _storage._creatorJob != rhs_storage._creatorJob {return false}

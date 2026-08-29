@@ -17,10 +17,15 @@ struct JobGroupDetailView: View {
 
     @State private var selectedTab: Tab = .members
     @State private var showEditor = false
+    @State private var ruleEditorRequest: GroupRuleEditorState?
+    @State private var rulesReloadToken = 0
     @State private var confirmArchive = false
     @State private var confirmRestore = false
     @State private var archiveReason = ""
     @State private var pendingArchive = false
+    @State private var activitySelectedTypes: Set<Resources_Jobs_Groups_GroupActivityType> = []
+    @State private var activityReloadToken = 0
+    @State private var activityLinkUserID: Int32?
 
     enum Tab: String, CaseIterable, Identifiable {
         case members = "Mitglieder"
@@ -95,6 +100,44 @@ struct JobGroupDetailView: View {
         .listStyle(.insetGrouped)
         .navigationTitle(group?.name ?? "Gruppe")
         .navigationBarTitleDisplayMode(.inline)
+        .navigationDestination(item: $activityLinkUserID) { userID in
+            ColleagueDetailView(userID: userID)
+        }
+        .toolbar {
+            ToolbarItemGroup(placement: .topBarTrailing) {
+                if selectedTab == .activity {
+                    Menu {
+                        ForEach(activityTypes, id: \.rawValue) { type in
+                            Button {
+                                if activitySelectedTypes.contains(type) {
+                                    activitySelectedTypes.remove(type)
+                                } else {
+                                    activitySelectedTypes.insert(type)
+                                }
+                                activityReloadToken += 1
+                            } label: {
+                                if activitySelectedTypes.contains(type) {
+                                    Label(type.label, systemImage: "checkmark")
+                                } else {
+                                    Text(type.label)
+                                }
+                            }
+                        }
+                        Button(role: .destructive) {
+                            activitySelectedTypes.removeAll()
+                            activityReloadToken += 1
+                        } label: {
+                            Text("Alle anzeigen")
+                        }
+                    } label: {
+                        Label(
+                            activitySelectedTypes.isEmpty ? "Alle Typen" : "\(activitySelectedTypes.count) Typ(en)",
+                            systemImage: "line.3.horizontal.decrease.circle"
+                        )
+                    }
+                }
+            }
+        }
         .refreshable { await load() }
         .task {
             guard !hasLoaded else { return }
@@ -108,6 +151,12 @@ struct JobGroupDetailView: View {
                     Task { await load() }
                 }
             }
+        }
+        .sheet(item: $ruleEditorRequest) { request in
+            GroupRuleEditorSheet(groupID: request.groupID, rule: request.rule) { _ in
+                rulesReloadToken += 1
+            }
+            .environment(appState)
         }
         .confirmationDialog(
             group?.state == .archived ? "Gruppe wiederherstellen" : "Gruppe archivieren",
@@ -161,9 +210,11 @@ struct JobGroupDetailView: View {
 
                 HStack(spacing: Theme.Spacing.sm) {
                     Label(group.type.label, systemImage: group.type.icon)
+                        .labelStyle(CompactLabelStyle())
                         .font(Theme.Typography.caption)
                         .foregroundStyle(group.type.tint)
                     Label(group.membershipMode.label, systemImage: group.membershipMode.icon)
+                        .labelStyle(CompactLabelStyle())
                         .font(Theme.Typography.caption)
                         .foregroundStyle(group.membershipMode.tint)
                     Text(group.state.label)
@@ -239,7 +290,9 @@ struct JobGroupDetailView: View {
                     groupType: group.type,
                     access: access,
                     canView: canViewGroup,
-                    canManage: canMutateGroup
+                    canManage: canMutateGroup,
+                    editorRequest: $ruleEditorRequest,
+                    reloadToken: $rulesReloadToken
                 )
             case .manualMembers:
                 GroupManualMembersPanel(
@@ -265,7 +318,13 @@ struct JobGroupDetailView: View {
                     canManage: canMutateGroup
                 )
             case .activity:
-                GroupActivityPanel(groupID: groupID, canView: canViewGroup)
+                GroupActivityPanel(
+                    groupID: groupID,
+                    canView: canViewGroup,
+                    selectedTypes: $activitySelectedTypes,
+                    reloadToken: $activityReloadToken,
+                    linkUserID: $activityLinkUserID
+                )
             }
         }
     }

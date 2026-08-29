@@ -50,6 +50,15 @@ actor FiveNetChannel {
         state.lock.unlock()
     }
 
+    /// Registers a handler invoked when the server rejects the session as
+    /// unauthenticated/invalid (auth handshake failure or an Unauthenticated
+    /// status on an RPC). The app uses this to auto-logout an expired session.
+    nonisolated func setAuthFailureHandler(_ handler: @escaping @Sendable () -> Void) {
+        state.lock.lock()
+        state.authFailureHandler = handler
+        state.lock.unlock()
+    }
+
     nonisolated func connectionState() -> Bool {
         state.lock.lock()
         defer { state.lock.unlock() }
@@ -75,6 +84,19 @@ actor FiveNetChannel {
         let handler = state.statusHandler
         state.lock.unlock()
         handler?(connected)
+    }
+
+    /// Invokes the auth-failure handler (if any) without blocking the actor.
+    private func notifyAuthFailure() {
+        state.lock.lock()
+        let handler = state.authFailureHandler
+        state.lock.unlock()
+        handler?()
+    }
+
+    private func isUnauthorizedError(_ error: Error) -> Bool {
+        if case FiveNetError.unauthorized = error { return true }
+        return false
     }
 
     /// Connects to the server and performs the control-plane authentication
@@ -382,7 +404,11 @@ actor FiveNetChannel {
             streams.removeValue(forKey: id)
             availableStreamIDs.insert(id)
         case .failure(let failure):
-            box.fail(error(from: failure))
+            let error = error(from: failure)
+            if isUnauthorizedError(error) {
+                notifyAuthFailure()
+            }
+            box.fail(error)
             streams.removeValue(forKey: id)
             availableStreamIDs.insert(id)
         case .cancel:
@@ -400,10 +426,12 @@ actor FiveNetChannel {
             if header.operation == "auth_ok" {
                 pendingAuth?.succeed()
             } else {
+                notifyAuthFailure()
                 pendingAuth?.fail(FiveNetError.unauthorized)
             }
             pendingAuth = nil
         case .failure(let failure):
+            notifyAuthFailure()
             pendingAuth?.fail(FiveNetError.loginFailed(failure.errorMessage))
             pendingAuth = nil
         case .ping(let ping):
@@ -519,6 +547,7 @@ private final class ConnectionStateBox: @unchecked Sendable {
     let lock = NSLock()
     var isConnected = false
     var statusHandler: (@Sendable (Bool) -> Void)?
+    var authFailureHandler: (@Sendable () -> Void)?
 }
 
 /// Per-stream message channel backed by an `AsyncThrowingStream`.

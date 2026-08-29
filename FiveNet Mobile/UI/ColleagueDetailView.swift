@@ -82,6 +82,7 @@ struct ColleagueDetailView: View {
                         JobConductListView(userID: userID)
                     }
                 }
+                .background(Theme.Palette.background.ignoresSafeArea())
             } else {
                 List {
                     EmptyStateView(

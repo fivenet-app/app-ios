@@ -25,7 +25,8 @@ struct GrpcWebClient: Sendable {
         request: I,
         responseType: O.Type,
         authToken: String?,
-        sendBearer: Bool = true
+        sendBearer: Bool = true,
+        cookie: String? = nil
     ) async throws -> O {
         try await unaryWithHeaders(
             service: service,
@@ -33,7 +34,8 @@ struct GrpcWebClient: Sendable {
             request: request,
             responseType: responseType,
             authToken: authToken,
-            sendBearer: sendBearer
+            sendBearer: sendBearer,
+            cookie: cookie
         ).message
     }
 
@@ -46,7 +48,8 @@ struct GrpcWebClient: Sendable {
         request: I,
         responseType: O.Type,
         authToken: String?,
-        sendBearer: Bool = true
+        sendBearer: Bool = true,
+        cookie: String? = nil
     ) async throws -> (message: O, headers: [AnyHashable: Any]) {
         let url = grpcEndpoint.appendingPathComponent("\(service)/\(method)")
 
@@ -64,11 +67,16 @@ struct GrpcWebClient: Sendable {
             if sendBearer {
                 urlRequest.setValue("Bearer \(authToken)", forHTTPHeaderField: "Authorization")
             }
-            urlRequest.setValue("fivenet_acc=\(authToken)", forHTTPHeaderField: "Cookie")
+            urlRequest.setValue("fivenet_acc=\(cookie ?? authToken)", forHTTPHeaderField: "Cookie")
+        } else if let cookie, !cookie.isEmpty {
+            // Authenticated API calls send the distinct user token as the Bearer
+            // header while the session cookie stays the account token.
+            urlRequest.setValue("fivenet_acc=\(cookie)", forHTTPHeaderField: "Cookie")
         }
         urlRequest.httpBody = GrpcFramer.frame(try request.serializedData()).base64EncodedData()
+        urlRequest.timeoutInterval = 20
 
-        let (data, response) = try await session.data(for: urlRequest)
+        let (data, response) = try await Self.perform(session: session, request: urlRequest)
         guard let httpResponse = response as? HTTPURLResponse else {
             throw FiveNetError.invalidResponse("Keine HTTP-URLResponse erhalten")
         }
@@ -134,6 +142,31 @@ struct GrpcWebClient: Sendable {
             }
         }
         return nil
+    }
+
+    /// Performs the URLSession request WITHOUT cooperative task cancellation.
+    ///
+    /// `session.data(for:)` throws `URLError.cancelled` (-999) whenever the
+    /// surrounding SwiftUI task is torn down mid-flight (a `List`/`Section`
+    /// re-identifying its content, a tab switch, `.refreshable` re-entry, …).
+    /// That would silently kill the authenticated HTTP fallback for
+    /// `ListGroupActivity` — the request itself never completes, so no data is
+    /// delivered and the panel reports a bogus "cancelled" error. The
+    /// completion-handler data task only stops via session invalidation or the
+    /// request timeout (bounded above), never via child-task cancellation.
+    private static func perform(session: URLSession, request: URLRequest) async throws -> (Data, URLResponse) {
+        try await withCheckedThrowingContinuation { continuation in
+            session.dataTask(with: request) { data, response, error in
+                if let error {
+                    continuation.resume(throwing: error)
+                } else if let data, let response {
+                    continuation.resume(returning: (data, response))
+                } else {
+                    continuation.resume(throwing: FiveNetError.invalidResponse("Keine HTTP-Antwort erhalten"))
+                }
+            }
+            .resume()
+        }
     }
 
     /// Extracts a human-readable reason from an error thrown while parsing.

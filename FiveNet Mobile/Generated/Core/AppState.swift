@@ -367,6 +367,21 @@ final class AppState {
                 self?.isChannelConnected = connected
             }
         }
+        // Session expiry: if the server rejects the auth token mid-session
+        // (auth handshake failure or an Unauthenticated RPC status), drop the
+        // whole session and return to the login screen instead of leaving the
+        // user stuck on a dead overview.
+        client.setChannelAuthFailureHandler { [weak self] in
+            Task { @MainActor [weak self] in
+                guard let self else { return }
+                // Only act on a live session; per-server switches/disconnects
+                // intentionally tear down the channel without logging out.
+                guard self.phase == .overview || self.phase == .chooseCharacter else { return }
+                guard self.session.userToken != nil || self.session.accountToken != nil else { return }
+                await self.logout()
+                self.errorMessage = "Die Sitzung ist abgelaufen oder ungültig. Bitte melde dich erneut an."
+            }
+        }
         self.client = client
     }
 
@@ -538,6 +553,32 @@ final class AppState {
         case .jobGradeList(let list):
             return list.jobs[value] != nil || list.grades[value] != nil
         case .none: return false
+        }
+    }
+
+    /// Mirror of the web `attrStringList`: returns the raw list of attribute
+    /// values for a string-list attribute (e.g. the livemap `Access` attribute
+    /// with `Own`/`Lower_Rank`/`Same_Rank`/`Any`). Empty when the attribute is
+    /// absent, not a string list, or the role has no values set — callers must
+    /// distinguish that from a known-but-empty list by checking the web/server
+    /// default behavior (empty `Access` ⇒ creator-only).
+    func attrStringList(_ permission: String, key: String) -> [String] {
+        let parts = permission.split(separator: "/")
+        guard parts.count == 2 else { return [] }
+        let serviceParts = parts[0].split(separator: ".")
+        guard serviceParts.count == 2 else { return [] }
+        let namespace = String(serviceParts[0])
+        let service = String(serviceParts[1])
+        let name = String(parts[1])
+
+        guard let attribute = attributes.first(where: { attr in
+            attr.namespace == namespace && attr.service == service && attr.name == name && attr.key == key
+        }) else { return [] }
+
+        switch attribute.value.validValues {
+        case .stringList(let list): return list.strings
+        case .jobList(let list): return list.strings
+        case .jobGradeList, .none: return []
         }
     }
 
@@ -1414,6 +1455,26 @@ final class AppState {
         livemapError = nil
     }
 
+    /// Creates or updates a marker marker and keeps the local marker list in
+    /// sync (the livemap stream would echo it anyway; this avoids the wait).
+    func createOrUpdateMarker(_ marker: Resources_Livemap_Markers_MarkerMarker) async throws -> Resources_Livemap_Markers_MarkerMarker {
+        guard let client else { throw FiveNetError.notConnected }
+        let created = try await client.createOrUpdateMarker(marker)
+        if let index = livemapMarkerMarkers.firstIndex(where: { $0.id == created.id }) {
+            livemapMarkerMarkers[index] = created
+        } else {
+            livemapMarkerMarkers.append(created)
+        }
+        return created
+    }
+
+    /// Deletes a marker marker and removes it from the local list.
+    func deleteMarker(id: Int64) async throws {
+        guard let client else { throw FiveNetError.notConnected }
+        try await client.deleteMarker(id: id)
+        livemapMarkerMarkers.removeAll { $0.id == id }
+    }
+
     /// Starts the livemap stream and keeps the marker list updated. Restarts
     /// automatically after interruptions, mirroring the centrum stream.
     func startLivemapStream() async {
@@ -1920,10 +1981,10 @@ final class AppState {
         return try await client.listGroups(states: states, kind: kind, search: search, includeCounts: includeCounts, includeInactive: includeInactive, includeArchived: includeArchived, groupIds: groupIds, sortColumn: sortColumn, desc: desc, offset: offset, pageSize: pageSize)
     }
 
-    /// Fetches a single job group with optional include flags.
-    func getGroup(id: Int64, includeRules: Bool = false, includeLeaders: Bool = false, includeManualMembers: Bool = false, includeExclusions: Bool = false, includeResolvedMembers: Bool = false, includeArchived: Bool = true) async throws -> Services_Jobs_GetGroupResponse {
+    /// Fetches a single job group.
+    func getGroup(id: Int64, includeArchived: Bool = true) async throws -> Services_Jobs_GetGroupResponse {
         guard let client else { throw FiveNetError.notConnected }
-        return try await client.getGroup(id: id, includeRules: includeRules, includeLeaders: includeLeaders, includeManualMembers: includeManualMembers, includeExclusions: includeExclusions, includeResolvedMembers: includeResolvedMembers, includeArchived: includeArchived)
+        return try await client.getGroup(id: id, includeArchived: includeArchived)
     }
 
     /// Creates a new job group. The server fills `job` from the session token.
@@ -2017,7 +2078,7 @@ final class AppState {
     }
 
     /// Lists group membership rules.
-    func listGroupRules(groupID: Int64, offset: Int64 = 0, pageSize: Int64 = 50) async throws -> Services_Jobs_ListGroupRulesResponse {
+    func listGroupRules(groupID: Int64, offset: Int64 = 0, pageSize: Int64 = 20) async throws -> Services_Jobs_ListGroupRulesResponse {
         guard let client else { throw FiveNetError.notConnected }
         return try await client.listGroupRules(groupID: groupID, offset: offset, pageSize: pageSize)
     }

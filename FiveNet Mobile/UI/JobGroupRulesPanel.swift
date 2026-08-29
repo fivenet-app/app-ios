@@ -13,7 +13,15 @@ struct GroupRulesPanel: View {
     let canView: Bool
     let canManage: Bool
 
-    private static let pageSize: Int64 = 50
+    /// Das Regel-Editor-Sheet hängt NICHT am Panel-Inhalt, sondern am stabilen
+    /// `List`-Level der `JobGroupDetailView` (Binding `editorRequest`). Solange
+    /// das Panel nachlädt (`.task`-`load()`), würde ein direkt hier verankertes
+    /// Sheet beim ersten Öffnen sofort wieder abgerissen (Auto-Close-Bug).
+    @Binding var editorRequest: GroupRuleEditorState?
+    /// Wird vom Detail-Parent nach dem Speichern erhöht → Panel lädt neu.
+    @Binding var reloadToken: Int
+
+    private static let pageSize: Int64 = 20
 
     @State private var rules: [Resources_Jobs_Groups_GroupRule] = []
     @State private var isLoading = false
@@ -23,8 +31,6 @@ struct GroupRulesPanel: View {
     @State private var hasLoaded = false
     @State private var isMutating = false
 
-    @State private var editingRule: Resources_Jobs_Groups_GroupRule?
-    @State private var showEditor = false
     @State private var togglingRule: Resources_Jobs_Groups_GroupRule?
     @State private var confirmDelete: Resources_Jobs_Groups_GroupRule?
 
@@ -48,8 +54,7 @@ struct GroupRulesPanel: View {
             if groupType.allowsRules {
                 if canManage {
                     Button {
-                        editingRule = nil
-                        showEditor = true
+                        editorRequest = GroupRuleEditorState(groupID: groupID, rule: nil)
                     } label: {
                         HStack {
                             Label("Regel hinzufügen", systemImage: "plus.square.on.square")
@@ -81,8 +86,7 @@ struct GroupRulesPanel: View {
                                 Task { await toggle(rule) }
                             },
                         onEdit: {
-                            editingRule = rule
-                            showEditor = true
+                            editorRequest = GroupRuleEditorState(groupID: groupID, rule: rule)
                         },
                         onDelete: {
                             confirmDelete = rule
@@ -99,14 +103,8 @@ struct GroupRulesPanel: View {
             guard groupType.allowsRules else { return }
             await load()
         }
-        .sheet(isPresented: $showEditor) {
-            GroupRuleEditorSheet(
-                groupID: groupID,
-                rule: editingRule
-            ) { _ in
-                Task { await load(reset: true) }
-            }
-            .environment(appState)
+        .onChange(of: reloadToken) { _, _ in
+            Task { await load(reset: true) }
         }
         .confirmationDialog(
             "Regel löschen",
@@ -184,6 +182,15 @@ struct GroupRulesPanel: View {
             errorMessage = error.localizedDescription
         }
     }
+}
+
+/// Beschreibung des (hochgezogenen) Regel-Editor-Sheets. Das Sheet wird von der
+/// `JobGroupDetailView` am stabilen `List`-Level präsentiert (`.sheet(item:)`),
+/// damit es beim Nachladen des Regeln-Panels nicht abgerissen wird.
+struct GroupRuleEditorState: Identifiable {
+    let id = UUID()
+    let groupID: Int64
+    let rule: Resources_Jobs_Groups_GroupRule?
 }
 
 /// Zeile einer Gruppen-Regel: Label, Aktiv-Toggle, Bearbeiten/Löschen.

@@ -612,7 +612,7 @@ struct GroupLeadersPanel: View {
                     selectedUser = nil
                 } label: {
                     HStack {
-                        Label("Leiter hinzufügen", systemImage: "person.badge.star")
+                        Label("Leiter hinzufügen", systemImage: "person.badge.plus")
                         Spacer()
                         CardChevron()
                     }
@@ -626,7 +626,7 @@ struct GroupLeadersPanel: View {
                 }
             } else if leaders.isEmpty {
                 EmptyStateView(
-                    "person.badge.star",
+                    "person.badge.plus",
                     color: Theme.Palette.accent,
                     title: "Keine Leiter",
                     message: "Dieser Gruppe sind noch keine Leiter zugewiesen."
@@ -1111,6 +1111,9 @@ struct GroupActivityPanel: View {
 
     let groupID: Int64
     let canView: Bool
+    @Binding var selectedTypes: Set<Resources_Jobs_Groups_GroupActivityType>
+    @Binding var reloadToken: Int
+    @Binding var linkUserID: Int32?
 
     private static let pageSize: Int64 = 20
 
@@ -1120,8 +1123,6 @@ struct GroupActivityPanel: View {
     @State private var currentPage: Int64 = 0
     @State private var totalCount: Int64 = 0
     @State private var hasLoaded = false
-
-    @State private var selectedTypes: Set<Resources_Jobs_Groups_GroupActivityType> = []
 
     private var totalPages: Int64 {
         max(1, Int64(ceil(Double(totalCount) / Double(Self.pageSize))))
@@ -1148,7 +1149,7 @@ struct GroupActivityPanel: View {
                 .cardRow()
             } else {
                 ForEach(activity, id: \.id) { entry in
-                    GroupActivityRow(entry: entry)
+                    GroupActivityRow(entry: entry, linkUserID: $linkUserID)
                         .cardRow()
                 }
 
@@ -1182,46 +1183,14 @@ struct GroupActivityPanel: View {
                 }
             }
         }
-        .toolbar {
-            ToolbarItem(placement: .topBarTrailing) {
-                Menu {
-                    ForEach(activityTypes, id: \.rawValue) { type in
-                        Button {
-                            if selectedTypes.contains(type) {
-                                selectedTypes.remove(type)
-                            } else {
-                                selectedTypes.insert(type)
-                            }
-                            Task { await load(reset: true) }
-                        } label: {
-                            if selectedTypes.contains(type) {
-                                Label(type.label, systemImage: "checkmark")
-                            } else {
-                                Text(type.label)
-                            }
-                        }
-                    }
-                    Button(role: .destructive) {
-                        selectedTypes.removeAll()
-                        Task { await load(reset: true) }
-                    } label: {
-                        Text("Alle anzeigen")
-                    }
-                } label: {
-                    Label(filterLabel, systemImage: "line.3.horizontal.decrease.circle")
-                }
-            }
+        .onChange(of: reloadToken) {
+            Task { await load(reset: true) }
         }
         .task {
             guard !hasLoaded else { return }
             hasLoaded = true
             await load()
         }
-    }
-
-    private var filterLabel: String {
-        if selectedTypes.isEmpty { return "Alle Typen" }
-        return "\(selectedTypes.count) Typ(en)"
     }
 
     func load(page: Int64? = nil, reset: Bool = false) async {
@@ -1252,6 +1221,7 @@ struct GroupActivityPanel: View {
 /// Zeile im Gruppen-Aktivitäts-Feed.
 struct GroupActivityRow: View {
     let entry: Resources_Jobs_Groups_GroupActivity
+    let linkUserID: Binding<Int32?>
 
     var body: some View {
         HStack(alignment: .top, spacing: Theme.Spacing.lg) {
@@ -1269,35 +1239,75 @@ struct GroupActivityRow: View {
                         .font(Theme.Typography.caption)
                         .foregroundStyle(.secondary)
                 }
-                if let targetName = entry.targetName {
-                    Text(targetName)
-                        .font(Theme.Typography.caption)
-                        .foregroundStyle(Theme.Palette.accent)
-                }
+                targetName
                 if entry.hasRuleID {
                     Text("Regel #\(entry.ruleID)")
                         .font(Theme.Typography.caption)
                         .foregroundStyle(.tertiary)
                 }
-                HStack {
+                HStack(spacing: 2) {
                     Text(formatTimestamp(entry.createdAt))
                         .font(Theme.Typography.caption2)
                         .foregroundStyle(.tertiary)
-                    if let actorName = entry.actorName {
-                        Text("· \(actorName)")
-                            .font(Theme.Typography.caption2)
-                            .foregroundStyle(.tertiary)
-                            .lineLimit(1)
-                    }
+                    actorName
                 }
             }
             Spacer(minLength: 0)
         }
         .padding(.vertical, Theme.Spacing.xs)
+        .padding(Theme.Spacing.md)
+        .background(
+            Theme.Palette.surface,
+            in: RoundedRectangle(cornerRadius: Theme.Radius.lg, style: .continuous)
+        )
+        .shadow(color: .black.opacity(0.04), radius: 6, y: 2)
+    }
+
+    /// Ziel-User: Name (bzw. Fallback) mit Link zum Kollegen-Detail.
+    @ViewBuilder
+    private var targetName: some View {
+        if entry.hasTargetUserID {
+            Button {
+                linkUserID.wrappedValue = entry.targetUserID
+            } label: {
+                Text(entry.targetName ?? "Benutzer #\(entry.targetUserID)")
+                    .font(Theme.Typography.caption)
+                    .foregroundStyle(Theme.Palette.accent)
+            }
+            .buttonStyle(.borderless)
+        } else if let name = entry.targetName {
+            Text(name)
+                .font(Theme.Typography.caption)
+                .foregroundStyle(Theme.Palette.accent)
+        }
+    }
+
+    /// Ausführender User: Name (bzw. Fallback) mit Link zum Kollegen-Detail.
+    @ViewBuilder
+    private var actorName: some View {
+        if entry.hasActorUserID {
+            Text("·")
+                .font(Theme.Typography.caption2)
+                .foregroundStyle(.tertiary)
+            Button {
+                linkUserID.wrappedValue = entry.actorUserID
+            } label: {
+                Text(entry.actorName ?? "Benutzer #\(entry.actorUserID)")
+                    .font(Theme.Typography.caption2)
+                    .foregroundStyle(Theme.Palette.accent)
+                    .lineLimit(1)
+            }
+            .buttonStyle(.borderless)
+        } else if let name = entry.actorName {
+            Text("· \(name)")
+                .font(Theme.Typography.caption2)
+                .foregroundStyle(.tertiary)
+                .lineLimit(1)
+        }
     }
 }
 
-/// Alle Gruppen-Aktivitätstypen außer `.unspecified` (für den Filter-Menu).
-private var activityTypes: [Resources_Jobs_Groups_GroupActivityType] {
+/// Alle Gruppen-Aktivitätstypen außer `.unspecified` (für das Filter-Menu).
+var activityTypes: [Resources_Jobs_Groups_GroupActivityType] {
     Resources_Jobs_Groups_GroupActivityType.allCases.filter { $0 != .unspecified }
 }

@@ -47,6 +47,10 @@ final class FiveNetClient: @unchecked Sendable {
         channel.setStatusHandler(handler)
     }
 
+    func setChannelAuthFailureHandler(_ handler: @escaping @Sendable () -> Void) {
+        channel.setAuthFailureHandler(handler)
+    }
+
     /// Opens the WebSocket channel and authenticates it with the current user token.
     func connectChannel() async throws {
         try await channel.connect(userToken: userToken, accountToken: accountToken)
@@ -509,6 +513,31 @@ final class FiveNetClient: @unchecked Sendable {
             }
             continuation.onTermination = { _ in task.cancel() }
         }
+    }
+
+    /// Creates or updates a marker marker (zone/shape) on the livemap.
+    func createOrUpdateMarker(_ marker: Resources_Livemap_Markers_MarkerMarker) async throws -> Resources_Livemap_Markers_MarkerMarker {
+        var request = Services_Livemap_CreateOrUpdateMarkerRequest()
+        request.marker = marker
+        let response: Services_Livemap_CreateOrUpdateMarkerResponse = try await call(
+            service: "services.livemap.LivemapService",
+            method: "CreateOrUpdateMarker",
+            requestData: try request.serializedData(),
+            responseType: Services_Livemap_CreateOrUpdateMarkerResponse.self
+        )
+        return response.marker
+    }
+
+    /// Deletes (or restores) a marker marker on the livemap.
+    func deleteMarker(id: Int64) async throws {
+        var request = Services_Livemap_DeleteMarkerRequest()
+        request.id = id
+        _ = try await call(
+            service: "services.livemap.LivemapService",
+            method: "DeleteMarker",
+            requestData: try request.serializedData(),
+            responseType: Services_Livemap_DeleteMarkerResponse.self
+        )
     }
 
     // MARK: - Wiki
@@ -1424,16 +1453,12 @@ final class FiveNetClient: @unchecked Sendable {
         )
     }
 
-    /// Fetches a single job group with optional include flags. The detail view
-    /// only needs `group` + `access` (set all includes false, `includeArchived` true).
-    func getGroup(id: Int64, includeRules: Bool = false, includeLeaders: Bool = false, includeManualMembers: Bool = false, includeExclusions: Bool = false, includeResolvedMembers: Bool = false, includeArchived: Bool = true) async throws -> Services_Jobs_GetGroupResponse {
+    /// Fetches a single job group. The detail view only needs `group` + `access`
+    /// (the v2026.8.4 proto dropped the per-item include flags — panels load
+    /// rules/leaders/members/exclusions via the dedicated list endpoints).
+    func getGroup(id: Int64, includeArchived: Bool = true) async throws -> Services_Jobs_GetGroupResponse {
         var request = Services_Jobs_GetGroupRequest()
         request.id = id
-        request.includeRules = includeRules
-        request.includeLeaders = includeLeaders
-        request.includeManualMembers = includeManualMembers
-        request.includeExclusions = includeExclusions
-        request.includeResolvedMembers = includeResolvedMembers
         request.includeArchived = includeArchived
         return try await call(
             service: "services.jobs.GroupsService",
@@ -1680,7 +1705,7 @@ final class FiveNetClient: @unchecked Sendable {
     }
 
     /// Lists group membership rules.
-    func listGroupRules(groupID: Int64, offset: Int64 = 0, pageSize: Int64 = 50) async throws -> Services_Jobs_ListGroupRulesResponse {
+    func listGroupRules(groupID: Int64, offset: Int64 = 0, pageSize: Int64 = 20) async throws -> Services_Jobs_ListGroupRulesResponse {
         var request = Services_Jobs_ListGroupRulesRequest()
         request.pagination.offset = offset
         request.pagination.pageSize = pageSize
@@ -1761,12 +1786,61 @@ final class FiveNetClient: @unchecked Sendable {
         request.sort.columns = [
             Resources_Common_Database_SortByColumn.with { $0.id = "created_at"; $0.desc = true }
         ]
-        return try await call(
-            service: "services.jobs.GroupsService",
-            method: "ListGroupActivity",
-            requestData: try request.serializedData(),
-            responseType: Services_Jobs_ListGroupActivityResponse.self
-        )
+        do {
+            return try await call(
+                service: "services.jobs.GroupsService",
+                method: "ListGroupActivity",
+                requestData: try request.serializedData(),
+                responseType: Services_Jobs_ListGroupActivityResponse.self
+            )
+        } catch {
+            // Server-side grpcws-transport bug (fivenet `pkg/grpc/grpcws/websocket_stream.go`
+            // `GrpcStream.Write`): this RPC's response is buffered but never flushed. The exact
+            // failure mode varies with response size — small responses end "Header + Complete"
+            // with no body (`invalidResponse`), larger ones emit a teardown failure frame
+            // (`grpcStatus(-1, "...cancel...")`). The identical call succeeds over the HTTP
+            // gRPC-Web path, so fall back to it for those transport-level failures.
+            guard shouldRetryListGroupActivityOverHTTP(error) else {
+                print("[FiveNetClient] listGroupActivity: WS-Error wird NICHT retried: \(error)")
+                throw error
+            }
+            print("[FiveNetClient] listGroupActivity: WS-Error \(error) -> HTTP-Fallback (task.isCancelled=\(Task.isCancelled))")
+            do {
+                let response = try await grpcWeb.unary(
+                    service: "services.jobs.GroupsService",
+                    method: "ListGroupActivity",
+                    request: request,
+                    responseType: Services_Jobs_ListGroupActivityResponse.self,
+                    authToken: userToken,
+                    cookie: accountToken
+                )
+                print("[FiveNetClient] listGroupActivity: HTTP-Fallback OK, activities=\(response.activity.count)")
+                return response
+            } catch {
+                print("[FiveNetClient] listGroupActivity: HTTP-Fallback FEHLGESCHLAGEN: \(error)")
+                throw error
+            }
+        }
+    }
+
+    /// True when a transport-level WS failure of `ListGroupActivity` should be
+    /// retried over the HTTP gRPC-Web path (see comment above). Genuine business
+    /// errors (Err*, i18n messages) are rethrown unchanged.
+    private func shouldRetryListGroupActivityOverHTTP(_ error: Error) -> Bool {
+        guard let error = error as? FiveNetError else { return false }
+        switch error {
+        case .invalidResponse:
+            return true
+        case .cancelled:
+            return true
+        case .grpcStatus(let code, let message):
+            // WS `failure` frames carry the synthetic code -1; the grpcws teardown
+            // of the unflushed stream surfaces as "cancelled"/"Canceled"/"context
+            // canceled"/"rpc error: code = Canceled ..." — match on the keyword.
+            return code == -1 && message.lowercased().contains("cancel")
+        default:
+            return false
+        }
     }
 
     // MARK: - Settings: Leitstelle (Centrum)

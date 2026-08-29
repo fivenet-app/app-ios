@@ -778,3 +778,18 @@ extension View {
         }
     }
 }
+
+/// Label-Stil mit engem Icon-Text-Abstand.
+///
+/// Der Standard-`LabelStyle` legt in Listen-Kontexten zu viel Abstand zwischen
+/// Icon und Titel; dieser Stil presst beide eng zusammen (`spacing`).
+struct CompactLabelStyle: LabelStyle {
+    var spacing: CGFloat = Theme.Spacing.xxs
+
+    func makeBody(configuration: Configuration) -> some View {
+        HStack(spacing: spacing) {
+            configuration.icon
+            configuration.title
+        }
+    }
+}

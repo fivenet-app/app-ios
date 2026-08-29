@@ -34,38 +34,10 @@ struct QuickAccessEditSheet: View {
                     Text("Wischen zum Entfernen, Ziehen zum Sortieren. Ein Tab öffnet das Modul direkt auf der ausgewählten Ansicht.")
                 }
 
-                if !addableModules.isEmpty || !addableTabs.isEmpty {
+                if !addableSections.isEmpty {
                     Section("Hinzufügen") {
-                        if !addableModules.isEmpty {
-                            ForEach(addableModules) { module in
-                                Button {
-                                    withAnimation {
-                                        items.append(.module(module))
-                                    }
-                                } label: {
-                                    Label(module.title, systemImage: module.icon)
-                                        .foregroundStyle(.primary)
-                                }
-                            }
-                        }
-
-                        if !addableTabs.isEmpty {
-                            ForEach(addableTabs) { tab in
-                                Button {
-                                    withAnimation {
-                                        items.append(.tab(tab))
-                                    }
-                                } label: {
-                                    HStack {
-                                        Label(tab.label, systemImage: tab.icon)
-                                            .foregroundStyle(.primary)
-                                        Spacer()
-                                        Text(tab.module.title)
-                                            .font(.caption)
-                                            .foregroundStyle(.secondary)
-                                    }
-                                }
-                            }
+                        ForEach(addableSections) { section in
+                            addRow(for: section)
                         }
                     }
                 }
@@ -106,23 +78,105 @@ struct QuickAccessEditSheet: View {
         }
         .padding(.vertical, Theme.Spacing.xs)
     }
+}
 
-    /// Zugängliche Module, die noch nicht als ganzes Modul im Schnellzugriff
-    /// sind (ein bereits enthaltener Tab schließt das Modul selbst nicht aus).
-    private var addableModules: [FiveNetModule] {
-        appState.accessibleModules.filter { module in
-            !items.contains { if case .module(let m) = $0 { return m == module }; return false }
+/// Hinzufügen-Zeile für ein Modul: ein Dropdown (`Menu`) mit der Option das
+/// gesamte Modul zu heften („Gesamtes Modul“) sowie allen noch nicht
+/// angehefteten Tabs des Moduls — statt einer flachen, langen Tab-Liste.
+private struct AddSection: Identifiable {
+    let module: FiveNetModule
+    let addableTabs: [QuickAccessTab]
+    var id: String { module.rawValue }
+}
+
+/// Angeheftete Module und Tab-Ziele der Startseite (in „Hinzufügen“) —
+/// pro Modul gebündelt via Dropdown.
+private extension QuickAccessEditSheet {
+    private var addableSections: [AddSection] {
+        appState.accessibleModules.compactMap { module in
+            let hasModule = moduleIsAddable(module)
+            let tabs = addableTabs(for: module)
+            guard hasModule || !tabs.isEmpty else { return nil }
+            return AddSection(module: module, addableTabs: tabs)
         }
     }
 
-    /// Zugängliche Tab-Ziele, die noch nicht als Tab im Schnellzugriff sind.
+    /// Ob das Modul noch nicht als ganzes Modul im Schnellzugriff ist.
+    private func moduleIsAddable(_ module: FiveNetModule) -> Bool {
+        !items.contains { if case .module(let m) = $0 { return m == module }; return false }
+    }
+
+    /// Tab-Ziele eines Moduls, die noch nicht als Tab im Schnellzugriff sind.
     /// Ein als ganzes Modul angeheftetes Modul schließt seine Tabs NICHT aus —
     /// so kann man gezielt einzelne Ansichten anheften, auch wenn das Modul
     /// selbst bereits im Schnellzugriff ist.
-    private var addableTabs: [QuickAccessTab] {
+    private func addableTabs(for module: FiveNetModule) -> [QuickAccessTab] {
         QuickAccessTab.allCases.filter { tab in
-            appState.accessibleModules.contains(tab.module)
+            tab.module == module
                 && !items.contains { if case .tab(let existing) = $0 { return existing == tab }; return false }
         }
+    }
+
+    @ViewBuilder
+    private func addRow(for section: AddSection) -> some View {
+        if section.addableTabs.isEmpty {
+            Button {
+                withAnimation {
+                    items.append(.module(section.module))
+                }
+            } label: {
+                HStack {
+                    addRowIcon(section.module)
+                    Text(section.module.title)
+                        .foregroundStyle(.primary)
+                    Spacer()
+                }
+                .contentShape(Rectangle())
+            }
+            .buttonStyle(.borderless)
+        } else {
+            Menu {
+                if moduleIsAddable(section.module) {
+                    Button {
+                        withAnimation {
+                            items.append(.module(section.module))
+                        }
+                    } label: {
+                        Label("Gesamtes Modul", systemImage: section.module.icon)
+                    }
+                    if !section.addableTabs.isEmpty {
+                        Divider()
+                    }
+                }
+                ForEach(section.addableTabs) { tab in
+                    Button {
+                        withAnimation {
+                            items.append(.tab(tab))
+                        }
+                    } label: {
+                        Label(tab.label, systemImage: tab.icon)
+                    }
+                }
+            } label: {
+                HStack {
+                    addRowIcon(section.module)
+                    Text(section.module.title)
+                        .foregroundStyle(.primary)
+                    Spacer()
+                    Image(systemName: "chevron.up.chevron.down")
+                        .font(.caption.weight(.semibold))
+                        .foregroundStyle(.secondary)
+                }
+            }
+        }
+    }
+
+    /// Identisches Start-Icon in beiden "Hinzufügen"-Zeilen-Varianten (Button /
+    /// Dropdown), damit die Titel auf derselben x-Position beginnen.
+    private func addRowIcon(_ module: FiveNetModule) -> some View {
+        Image(systemName: module.icon)
+            .font(.subheadline.weight(.semibold))
+            .frame(width: 20, alignment: .center)
+            .foregroundStyle(module.tint)
     }
 }

@@ -185,6 +185,13 @@ final class DocumentContentEditorModel {
             var node = Google_Protobuf_Struct()
             node.fields["type"] = .with { $0.stringValue = "hardBreak" }
             return node
+        case .checkbox(let checked):
+            var node = Google_Protobuf_Struct()
+            node.fields["type"] = .with { $0.stringValue = "checkboxStandalone" }
+            var attrs = Google_Protobuf_Struct()
+            attrs.fields["checked"] = .with { $0.boolValue = checked }
+            node.fields["attrs"] = .with { $0.structValue = attrs }
+            return node
         }
     }
 
@@ -284,7 +291,7 @@ final class DocumentContentEditorModel {
 
         func listNode(_ type: String, checked: Bool? = nil) -> Google_Protobuf_Struct {
             var item = Google_Protobuf_Struct()
-            item.fields["type"] = .with { $0.stringValue = "listItem" }
+            item.fields["type"] = .with { $0.stringValue = type == "taskList" ? "taskItem" : "listItem" }
             if let checked {
                 item.fields["attrs"] = .with { $0.structValue = { () -> Google_Protobuf_Struct in
                     var attrs = Google_Protobuf_Struct()
