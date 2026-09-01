@@ -253,6 +253,14 @@ extension Resources_Jobs_Groups_GroupRule {
             }
         case .qualification(let qualification):
             let mode = qualification.type == .any ? "Eine von" : "Alle von"
+            if !qualification.qualifications.isEmpty {
+                let names = qualification.qualifications
+                    .map { q in
+                        q.abbreviation.isEmpty ? q.title : "\(q.abbreviation): \(q.title)"
+                    }
+                    .joined(separator: ", ")
+                return "\(mode) \(names)"
+            }
             return "\(mode) \(qualification.qualificationIds.count) Qualifikationen"
         default:
             return "Regel"

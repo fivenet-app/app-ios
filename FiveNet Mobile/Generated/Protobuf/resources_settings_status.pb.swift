@@ -61,15 +61,6 @@ nonisolated struct Resources_Settings_SystemStatus: @unchecked Sendable {
   /// Clears the value of `nats`. Subsequent reads from it will return its default value.
   mutating func clearNats() {_uniqueStorage()._nats = nil}
 
-  var dbsync: Resources_Settings_DBSyncStatus {
-    get {_storage._dbsync ?? Resources_Settings_DBSyncStatus()}
-    set {_uniqueStorage()._dbsync = newValue}
-  }
-  /// Returns true if `dbsync` has been explicitly set.
-  var hasDbsync: Bool {_storage._dbsync != nil}
-  /// Clears the value of `dbsync`. Subsequent reads from it will return its default value.
-  mutating func clearDbsync() {_uniqueStorage()._dbsync = nil}
-
   var version: Resources_Settings_VersionStatus {
     get {_storage._version ?? Resources_Settings_VersionStatus()}
     set {_uniqueStorage()._version = newValue}
@@ -78,6 +69,15 @@ nonisolated struct Resources_Settings_SystemStatus: @unchecked Sendable {
   var hasVersion: Bool {_storage._version != nil}
   /// Clears the value of `version`. Subsequent reads from it will return its default value.
   mutating func clearVersion() {_uniqueStorage()._version = nil}
+
+  var dbsync: Resources_Settings_DBSyncStatus {
+    get {_storage._dbsync ?? Resources_Settings_DBSyncStatus()}
+    set {_uniqueStorage()._dbsync = newValue}
+  }
+  /// Returns true if `dbsync` has been explicitly set.
+  var hasDbsync: Bool {_storage._dbsync != nil}
+  /// Clears the value of `dbsync`. Subsequent reads from it will return its default value.
+  mutating func clearDbsync() {_uniqueStorage()._dbsync = nil}
 
   var unknownFields = SwiftProtobuf.UnknownStorage()
 
@@ -94,6 +94,8 @@ nonisolated struct Resources_Settings_Nats: Sendable {
   var version: String = String()
 
   var connected: Bool = false
+
+  var migrationVersion: String = String()
 
   var unknownFields = SwiftProtobuf.UnknownStorage()
 
@@ -122,49 +124,6 @@ nonisolated struct Resources_Settings_Database: Sendable {
   var unknownFields = SwiftProtobuf.UnknownStorage()
 
   init() {}
-}
-
-nonisolated struct Resources_Settings_DBSyncStatus: Sendable {
-  // SwiftProtobuf.Message conformance is added in an extension below. See the
-  // `Message` and `Message+*Additions` files in the SwiftProtobuf library for
-  // methods supported on all messages.
-
-  var enabled: Bool = false
-
-  var lastSyncedData: Resources_Timestamp_Timestamp {
-    get {_lastSyncedData ?? Resources_Timestamp_Timestamp()}
-    set {_lastSyncedData = newValue}
-  }
-  /// Returns true if `lastSyncedData` has been explicitly set.
-  var hasLastSyncedData: Bool {self._lastSyncedData != nil}
-  /// Clears the value of `lastSyncedData`. Subsequent reads from it will return its default value.
-  mutating func clearLastSyncedData() {self._lastSyncedData = nil}
-
-  var lastSyncedActivity: Resources_Timestamp_Timestamp {
-    get {_lastSyncedActivity ?? Resources_Timestamp_Timestamp()}
-    set {_lastSyncedActivity = newValue}
-  }
-  /// Returns true if `lastSyncedActivity` has been explicitly set.
-  var hasLastSyncedActivity: Bool {self._lastSyncedActivity != nil}
-  /// Clears the value of `lastSyncedActivity`. Subsequent reads from it will return its default value.
-  mutating func clearLastSyncedActivity() {self._lastSyncedActivity = nil}
-
-  var lastDbsyncVersion: String {
-    get {_lastDbsyncVersion ?? String()}
-    set {_lastDbsyncVersion = newValue}
-  }
-  /// Returns true if `lastDbsyncVersion` has been explicitly set.
-  var hasLastDbsyncVersion: Bool {self._lastDbsyncVersion != nil}
-  /// Clears the value of `lastDbsyncVersion`. Subsequent reads from it will return its default value.
-  mutating func clearLastDbsyncVersion() {self._lastDbsyncVersion = nil}
-
-  var unknownFields = SwiftProtobuf.UnknownStorage()
-
-  init() {}
-
-  fileprivate var _lastSyncedData: Resources_Timestamp_Timestamp? = nil
-  fileprivate var _lastSyncedActivity: Resources_Timestamp_Timestamp? = nil
-  fileprivate var _lastDbsyncVersion: String? = nil
 }
 
 nonisolated struct Resources_Settings_VersionStatus: Sendable {
@@ -215,19 +174,86 @@ nonisolated struct Resources_Settings_NewVersionInfo: Sendable {
   fileprivate var _releaseDate: Resources_Timestamp_Timestamp? = nil
 }
 
+nonisolated struct Resources_Settings_DBSyncStatus: Sendable {
+  // SwiftProtobuf.Message conformance is added in an extension below. See the
+  // `Message` and `Message+*Additions` files in the SwiftProtobuf library for
+  // methods supported on all messages.
+
+  var enabled: Bool = false
+
+  var lastSyncedData: Resources_Timestamp_Timestamp {
+    get {_lastSyncedData ?? Resources_Timestamp_Timestamp()}
+    set {_lastSyncedData = newValue}
+  }
+  /// Returns true if `lastSyncedData` has been explicitly set.
+  var hasLastSyncedData: Bool {self._lastSyncedData != nil}
+  /// Clears the value of `lastSyncedData`. Subsequent reads from it will return its default value.
+  mutating func clearLastSyncedData() {self._lastSyncedData = nil}
+
+  var lastSyncedActivity: Resources_Timestamp_Timestamp {
+    get {_lastSyncedActivity ?? Resources_Timestamp_Timestamp()}
+    set {_lastSyncedActivity = newValue}
+  }
+  /// Returns true if `lastSyncedActivity` has been explicitly set.
+  var hasLastSyncedActivity: Bool {self._lastSyncedActivity != nil}
+  /// Clears the value of `lastSyncedActivity`. Subsequent reads from it will return its default value.
+  mutating func clearLastSyncedActivity() {self._lastSyncedActivity = nil}
+
+  var lastDbsyncVersion: String {
+    get {_lastDbsyncVersion ?? String()}
+    set {_lastDbsyncVersion = newValue}
+  }
+  /// Returns true if `lastDbsyncVersion` has been explicitly set.
+  var hasLastDbsyncVersion: Bool {self._lastDbsyncVersion != nil}
+  /// Clears the value of `lastDbsyncVersion`. Subsequent reads from it will return its default value.
+  mutating func clearLastDbsyncVersion() {self._lastDbsyncVersion = nil}
+
+  var streamConnected: Bool = false
+
+  var syncState: Resources_Settings_DBSyncSyncState {
+    get {_syncState ?? Resources_Settings_DBSyncSyncState()}
+    set {_syncState = newValue}
+  }
+  /// Returns true if `syncState` has been explicitly set.
+  var hasSyncState: Bool {self._syncState != nil}
+  /// Clears the value of `syncState`. Subsequent reads from it will return its default value.
+  mutating func clearSyncState() {self._syncState = nil}
+
+  var unknownFields = SwiftProtobuf.UnknownStorage()
+
+  init() {}
+
+  fileprivate var _lastSyncedData: Resources_Timestamp_Timestamp? = nil
+  fileprivate var _lastSyncedActivity: Resources_Timestamp_Timestamp? = nil
+  fileprivate var _lastDbsyncVersion: String? = nil
+  fileprivate var _syncState: Resources_Settings_DBSyncSyncState? = nil
+}
+
+nonisolated struct Resources_Settings_DBSyncSyncState: Sendable {
+  // SwiftProtobuf.Message conformance is added in an extension below. See the
+  // `Message` and `Message+*Additions` files in the SwiftProtobuf library for
+  // methods supported on all messages.
+
+  var tables: [Resources_Dbsync_DBSyncTableSyncState] = []
+
+  var unknownFields = SwiftProtobuf.UnknownStorage()
+
+  init() {}
+}
+
 // MARK: - Code below here is support for the SwiftProtobuf runtime.
 
 fileprivate nonisolated let _protobuf_package = "resources.settings"
 
 nonisolated extension Resources_Settings_SystemStatus: SwiftProtobuf.Message, SwiftProtobuf._MessageImplementationBase, SwiftProtobuf._ProtoNameProviding {
   static let protoMessageName: String = _protobuf_package + ".SystemStatus"
-  static let _protobuf_nameMap = SwiftProtobuf._NameMap(bytecode: "\0\u{1}database\0\u{1}nats\0\u{1}dbsync\0\u{1}version\0")
+  static let _protobuf_nameMap = SwiftProtobuf._NameMap(bytecode: "\0\u{1}database\0\u{1}nats\0\u{1}version\0\u{1}dbsync\0")
 
   fileprivate class _StorageClass {
     var _database: Resources_Settings_Database? = nil
     var _nats: Resources_Settings_Nats? = nil
-    var _dbsync: Resources_Settings_DBSyncStatus? = nil
     var _version: Resources_Settings_VersionStatus? = nil
+    var _dbsync: Resources_Settings_DBSyncStatus? = nil
 
       // This property is used as the initial default value for new instances of the type.
       // The type itself is protecting the reference to its storage via CoW semantics.
@@ -240,8 +266,8 @@ nonisolated extension Resources_Settings_SystemStatus: SwiftProtobuf.Message, Sw
     init(copying source: _StorageClass) {
       _database = source._database
       _nats = source._nats
-      _dbsync = source._dbsync
       _version = source._version
+      _dbsync = source._dbsync
     }
   }
 
@@ -262,8 +288,8 @@ nonisolated extension Resources_Settings_SystemStatus: SwiftProtobuf.Message, Sw
         switch fieldNumber {
         case 1: try { try decoder.decodeSingularMessageField(value: &_storage._database) }()
         case 2: try { try decoder.decodeSingularMessageField(value: &_storage._nats) }()
-        case 3: try { try decoder.decodeSingularMessageField(value: &_storage._dbsync) }()
-        case 4: try { try decoder.decodeSingularMessageField(value: &_storage._version) }()
+        case 3: try { try decoder.decodeSingularMessageField(value: &_storage._version) }()
+        case 4: try { try decoder.decodeSingularMessageField(value: &_storage._dbsync) }()
         default: break
         }
       }
@@ -282,10 +308,10 @@ nonisolated extension Resources_Settings_SystemStatus: SwiftProtobuf.Message, Sw
       try { if let v = _storage._nats {
         try visitor.visitSingularMessageField(value: v, fieldNumber: 2)
       } }()
-      try { if let v = _storage._dbsync {
+      try { if let v = _storage._version {
         try visitor.visitSingularMessageField(value: v, fieldNumber: 3)
       } }()
-      try { if let v = _storage._version {
+      try { if let v = _storage._dbsync {
         try visitor.visitSingularMessageField(value: v, fieldNumber: 4)
       } }()
     }
@@ -299,8 +325,8 @@ nonisolated extension Resources_Settings_SystemStatus: SwiftProtobuf.Message, Sw
         let rhs_storage = _args.1
         if _storage._database != rhs_storage._database {return false}
         if _storage._nats != rhs_storage._nats {return false}
-        if _storage._dbsync != rhs_storage._dbsync {return false}
         if _storage._version != rhs_storage._version {return false}
+        if _storage._dbsync != rhs_storage._dbsync {return false}
         return true
       }
       if !storagesAreEqual {return false}
@@ -312,7 +338,7 @@ nonisolated extension Resources_Settings_SystemStatus: SwiftProtobuf.Message, Sw
 
 nonisolated extension Resources_Settings_Nats: SwiftProtobuf.Message, SwiftProtobuf._MessageImplementationBase, SwiftProtobuf._ProtoNameProviding {
   static let protoMessageName: String = _protobuf_package + ".Nats"
-  static let _protobuf_nameMap = SwiftProtobuf._NameMap(bytecode: "\0\u{1}version\0\u{1}connected\0")
+  static let _protobuf_nameMap = SwiftProtobuf._NameMap(bytecode: "\0\u{1}version\0\u{1}connected\0\u{3}migration_version\0")
 
   mutating func decodeMessage<D: SwiftProtobuf.Decoder>(decoder: inout D) throws {
     while let fieldNumber = try decoder.nextFieldNumber() {
@@ -322,6 +348,7 @@ nonisolated extension Resources_Settings_Nats: SwiftProtobuf.Message, SwiftProto
       switch fieldNumber {
       case 1: try { try decoder.decodeSingularStringField(value: &self.version) }()
       case 2: try { try decoder.decodeSingularBoolField(value: &self.connected) }()
+      case 3: try { try decoder.decodeSingularStringField(value: &self.migrationVersion) }()
       default: break
       }
     }
@@ -334,12 +361,16 @@ nonisolated extension Resources_Settings_Nats: SwiftProtobuf.Message, SwiftProto
     if self.connected != false {
       try visitor.visitSingularBoolField(value: self.connected, fieldNumber: 2)
     }
+    if !self.migrationVersion.isEmpty {
+      try visitor.visitSingularStringField(value: self.migrationVersion, fieldNumber: 3)
+    }
     try unknownFields.traverse(visitor: &visitor)
   }
 
   static func ==(lhs: Resources_Settings_Nats, rhs: Resources_Settings_Nats) -> Bool {
     if lhs.version != rhs.version {return false}
     if lhs.connected != rhs.connected {return false}
+    if lhs.migrationVersion != rhs.migrationVersion {return false}
     if lhs.unknownFields != rhs.unknownFields {return false}
     return true
   }
@@ -400,55 +431,6 @@ nonisolated extension Resources_Settings_Database: SwiftProtobuf.Message, SwiftP
     if lhs.dbCharset != rhs.dbCharset {return false}
     if lhs.dbCollation != rhs.dbCollation {return false}
     if lhs.tablesOk != rhs.tablesOk {return false}
-    if lhs.unknownFields != rhs.unknownFields {return false}
-    return true
-  }
-}
-
-nonisolated extension Resources_Settings_DBSyncStatus: SwiftProtobuf.Message, SwiftProtobuf._MessageImplementationBase, SwiftProtobuf._ProtoNameProviding {
-  static let protoMessageName: String = _protobuf_package + ".DBSyncStatus"
-  static let _protobuf_nameMap = SwiftProtobuf._NameMap(bytecode: "\0\u{1}enabled\0\u{3}last_synced_data\0\u{3}last_synced_activity\0\u{3}last_dbsync_version\0")
-
-  mutating func decodeMessage<D: SwiftProtobuf.Decoder>(decoder: inout D) throws {
-    while let fieldNumber = try decoder.nextFieldNumber() {
-      // The use of inline closures is to circumvent an issue where the compiler
-      // allocates stack space for every case branch when no optimizations are
-      // enabled. https://github.com/apple/swift-protobuf/issues/1034
-      switch fieldNumber {
-      case 1: try { try decoder.decodeSingularBoolField(value: &self.enabled) }()
-      case 2: try { try decoder.decodeSingularMessageField(value: &self._lastSyncedData) }()
-      case 3: try { try decoder.decodeSingularMessageField(value: &self._lastSyncedActivity) }()
-      case 4: try { try decoder.decodeSingularStringField(value: &self._lastDbsyncVersion) }()
-      default: break
-      }
-    }
-  }
-
-  func traverse<V: SwiftProtobuf.Visitor>(visitor: inout V) throws {
-    // The use of inline closures is to circumvent an issue where the compiler
-    // allocates stack space for every if/case branch local when no optimizations
-    // are enabled. https://github.com/apple/swift-protobuf/issues/1034 and
-    // https://github.com/apple/swift-protobuf/issues/1182
-    if self.enabled != false {
-      try visitor.visitSingularBoolField(value: self.enabled, fieldNumber: 1)
-    }
-    try { if let v = self._lastSyncedData {
-      try visitor.visitSingularMessageField(value: v, fieldNumber: 2)
-    } }()
-    try { if let v = self._lastSyncedActivity {
-      try visitor.visitSingularMessageField(value: v, fieldNumber: 3)
-    } }()
-    try { if let v = self._lastDbsyncVersion {
-      try visitor.visitSingularStringField(value: v, fieldNumber: 4)
-    } }()
-    try unknownFields.traverse(visitor: &visitor)
-  }
-
-  static func ==(lhs: Resources_Settings_DBSyncStatus, rhs: Resources_Settings_DBSyncStatus) -> Bool {
-    if lhs.enabled != rhs.enabled {return false}
-    if lhs._lastSyncedData != rhs._lastSyncedData {return false}
-    if lhs._lastSyncedActivity != rhs._lastSyncedActivity {return false}
-    if lhs._lastDbsyncVersion != rhs._lastDbsyncVersion {return false}
     if lhs.unknownFields != rhs.unknownFields {return false}
     return true
   }
@@ -532,6 +514,95 @@ nonisolated extension Resources_Settings_NewVersionInfo: SwiftProtobuf.Message, 
     if lhs.version != rhs.version {return false}
     if lhs.url != rhs.url {return false}
     if lhs._releaseDate != rhs._releaseDate {return false}
+    if lhs.unknownFields != rhs.unknownFields {return false}
+    return true
+  }
+}
+
+nonisolated extension Resources_Settings_DBSyncStatus: SwiftProtobuf.Message, SwiftProtobuf._MessageImplementationBase, SwiftProtobuf._ProtoNameProviding {
+  static let protoMessageName: String = _protobuf_package + ".DBSyncStatus"
+  static let _protobuf_nameMap = SwiftProtobuf._NameMap(bytecode: "\0\u{1}enabled\0\u{3}last_synced_data\0\u{3}last_synced_activity\0\u{3}last_dbsync_version\0\u{3}stream_connected\0\u{3}sync_state\0")
+
+  mutating func decodeMessage<D: SwiftProtobuf.Decoder>(decoder: inout D) throws {
+    while let fieldNumber = try decoder.nextFieldNumber() {
+      // The use of inline closures is to circumvent an issue where the compiler
+      // allocates stack space for every case branch when no optimizations are
+      // enabled. https://github.com/apple/swift-protobuf/issues/1034
+      switch fieldNumber {
+      case 1: try { try decoder.decodeSingularBoolField(value: &self.enabled) }()
+      case 2: try { try decoder.decodeSingularMessageField(value: &self._lastSyncedData) }()
+      case 3: try { try decoder.decodeSingularMessageField(value: &self._lastSyncedActivity) }()
+      case 4: try { try decoder.decodeSingularStringField(value: &self._lastDbsyncVersion) }()
+      case 5: try { try decoder.decodeSingularBoolField(value: &self.streamConnected) }()
+      case 6: try { try decoder.decodeSingularMessageField(value: &self._syncState) }()
+      default: break
+      }
+    }
+  }
+
+  func traverse<V: SwiftProtobuf.Visitor>(visitor: inout V) throws {
+    // The use of inline closures is to circumvent an issue where the compiler
+    // allocates stack space for every if/case branch local when no optimizations
+    // are enabled. https://github.com/apple/swift-protobuf/issues/1034 and
+    // https://github.com/apple/swift-protobuf/issues/1182
+    if self.enabled != false {
+      try visitor.visitSingularBoolField(value: self.enabled, fieldNumber: 1)
+    }
+    try { if let v = self._lastSyncedData {
+      try visitor.visitSingularMessageField(value: v, fieldNumber: 2)
+    } }()
+    try { if let v = self._lastSyncedActivity {
+      try visitor.visitSingularMessageField(value: v, fieldNumber: 3)
+    } }()
+    try { if let v = self._lastDbsyncVersion {
+      try visitor.visitSingularStringField(value: v, fieldNumber: 4)
+    } }()
+    if self.streamConnected != false {
+      try visitor.visitSingularBoolField(value: self.streamConnected, fieldNumber: 5)
+    }
+    try { if let v = self._syncState {
+      try visitor.visitSingularMessageField(value: v, fieldNumber: 6)
+    } }()
+    try unknownFields.traverse(visitor: &visitor)
+  }
+
+  static func ==(lhs: Resources_Settings_DBSyncStatus, rhs: Resources_Settings_DBSyncStatus) -> Bool {
+    if lhs.enabled != rhs.enabled {return false}
+    if lhs._lastSyncedData != rhs._lastSyncedData {return false}
+    if lhs._lastSyncedActivity != rhs._lastSyncedActivity {return false}
+    if lhs._lastDbsyncVersion != rhs._lastDbsyncVersion {return false}
+    if lhs.streamConnected != rhs.streamConnected {return false}
+    if lhs._syncState != rhs._syncState {return false}
+    if lhs.unknownFields != rhs.unknownFields {return false}
+    return true
+  }
+}
+
+nonisolated extension Resources_Settings_DBSyncSyncState: SwiftProtobuf.Message, SwiftProtobuf._MessageImplementationBase, SwiftProtobuf._ProtoNameProviding {
+  static let protoMessageName: String = _protobuf_package + ".DBSyncSyncState"
+  static let _protobuf_nameMap = SwiftProtobuf._NameMap(bytecode: "\0\u{1}tables\0")
+
+  mutating func decodeMessage<D: SwiftProtobuf.Decoder>(decoder: inout D) throws {
+    while let fieldNumber = try decoder.nextFieldNumber() {
+      // The use of inline closures is to circumvent an issue where the compiler
+      // allocates stack space for every case branch when no optimizations are
+      // enabled. https://github.com/apple/swift-protobuf/issues/1034
+      switch fieldNumber {
+      case 1: try { try decoder.decodeRepeatedMessageField(value: &self.tables) }()
+      default: break
+      }
+    }
+  }
+
+  func traverse<V: SwiftProtobuf.Visitor>(visitor: inout V) throws {
+    if !self.tables.isEmpty {
+      try visitor.visitRepeatedMessageField(value: self.tables, fieldNumber: 1)
+    }
+    try unknownFields.traverse(visitor: &visitor)
+  }
+
+  static func ==(lhs: Resources_Settings_DBSyncSyncState, rhs: Resources_Settings_DBSyncSyncState) -> Bool {
+    if lhs.tables != rhs.tables {return false}
     if lhs.unknownFields != rhs.unknownFields {return false}
     return true
   }

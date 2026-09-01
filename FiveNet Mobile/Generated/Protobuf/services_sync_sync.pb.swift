@@ -129,6 +129,37 @@ nonisolated struct Services_Sync_GetStatusResponse: Sendable {
   fileprivate var _accounts: Resources_Sync_Data_DataStatus? = nil
 }
 
+nonisolated struct Services_Sync_SourceUser: Sendable {
+  // SwiftProtobuf.Message conformance is added in an extension below. See the
+  // `Message` and `Message+*Additions` files in the SwiftProtobuf library for
+  // methods supported on all messages.
+
+  var userID: Int32 {
+    get {_userID ?? 0}
+    set {_userID = newValue}
+  }
+  /// Returns true if `userID` has been explicitly set.
+  var hasUserID: Bool {self._userID != nil}
+  /// Clears the value of `userID`. Subsequent reads from it will return its default value.
+  mutating func clearUserID() {self._userID = nil}
+
+  var job: String {
+    get {_job ?? String()}
+    set {_job = newValue}
+  }
+  /// Returns true if `job` has been explicitly set.
+  var hasJob: Bool {self._job != nil}
+  /// Clears the value of `job`. Subsequent reads from it will return its default value.
+  mutating func clearJob() {self._job = nil}
+
+  var unknownFields = SwiftProtobuf.UnknownStorage()
+
+  init() {}
+
+  fileprivate var _userID: Int32? = nil
+  fileprivate var _job: String? = nil
+}
+
 nonisolated struct Services_Sync_RegisterAccountRequest: Sendable {
   // SwiftProtobuf.Message conformance is added in an extension below. See the
   // `Message` and `Message+*Additions` files in the SwiftProtobuf library for
@@ -384,11 +415,21 @@ nonisolated struct Services_Sync_AddUserActivityRequest: Sendable {
   /// Clears the value of `userActivity`. Subsequent reads from it will return its default value.
   mutating func clearUserActivity() {self._userActivity = nil}
 
+  var sourceUser: Services_Sync_SourceUser {
+    get {_sourceUser ?? Services_Sync_SourceUser()}
+    set {_sourceUser = newValue}
+  }
+  /// Returns true if `sourceUser` has been explicitly set.
+  var hasSourceUser: Bool {self._sourceUser != nil}
+  /// Clears the value of `sourceUser`. Subsequent reads from it will return its default value.
+  mutating func clearSourceUser() {self._sourceUser = nil}
+
   var unknownFields = SwiftProtobuf.UnknownStorage()
 
   init() {}
 
   fileprivate var _userActivity: Resources_Users_Activity_UserActivity? = nil
+  fileprivate var _sourceUser: Services_Sync_SourceUser? = nil
 }
 
 nonisolated struct Services_Sync_AddUserPropsRequest: Sendable {
@@ -405,11 +446,21 @@ nonisolated struct Services_Sync_AddUserPropsRequest: Sendable {
   /// Clears the value of `userProps`. Subsequent reads from it will return its default value.
   mutating func clearUserProps() {self._userProps = nil}
 
+  var sourceUser: Services_Sync_SourceUser {
+    get {_sourceUser ?? Services_Sync_SourceUser()}
+    set {_sourceUser = newValue}
+  }
+  /// Returns true if `sourceUser` has been explicitly set.
+  var hasSourceUser: Bool {self._sourceUser != nil}
+  /// Clears the value of `sourceUser`. Subsequent reads from it will return its default value.
+  mutating func clearSourceUser() {self._sourceUser = nil}
+
   var unknownFields = SwiftProtobuf.UnknownStorage()
 
   init() {}
 
   fileprivate var _userProps: Resources_Sync_Activity_UserProps? = nil
+  fileprivate var _sourceUser: Services_Sync_SourceUser? = nil
 }
 
 nonisolated struct Services_Sync_GetUserPropsRequest: Sendable {
@@ -445,6 +496,101 @@ nonisolated struct Services_Sync_GetUserPropsResponse: Sendable {
   fileprivate var _userProps: Resources_Users_Props_UserProps? = nil
 }
 
+nonisolated struct Services_Sync_GetVehiclePropsRequest: Sendable {
+  // SwiftProtobuf.Message conformance is added in an extension below. See the
+  // `Message` and `Message+*Additions` files in the SwiftProtobuf library for
+  // methods supported on all messages.
+
+  var plate: String = String()
+
+  var unknownFields = SwiftProtobuf.UnknownStorage()
+
+  init() {}
+}
+
+nonisolated struct Services_Sync_GetVehiclePropsResponse: Sendable {
+  // SwiftProtobuf.Message conformance is added in an extension below. See the
+  // `Message` and `Message+*Additions` files in the SwiftProtobuf library for
+  // methods supported on all messages.
+
+  var vehicleProps: Resources_Vehicles_Props_VehicleProps {
+    get {_vehicleProps ?? Resources_Vehicles_Props_VehicleProps()}
+    set {_vehicleProps = newValue}
+  }
+  /// Returns true if `vehicleProps` has been explicitly set.
+  var hasVehicleProps: Bool {self._vehicleProps != nil}
+  /// Clears the value of `vehicleProps`. Subsequent reads from it will return its default value.
+  mutating func clearVehicleProps() {self._vehicleProps = nil}
+
+  var unknownFields = SwiftProtobuf.UnknownStorage()
+
+  init() {}
+
+  fileprivate var _vehicleProps: Resources_Vehicles_Props_VehicleProps? = nil
+}
+
+nonisolated struct Services_Sync_SetVehiclePropsRequest: Sendable {
+  // SwiftProtobuf.Message conformance is added in an extension below. See the
+  // `Message` and `Message+*Additions` files in the SwiftProtobuf library for
+  // methods supported on all messages.
+
+  var vehicleProps: Resources_Vehicles_Props_VehicleProps {
+    get {_vehicleProps ?? Resources_Vehicles_Props_VehicleProps()}
+    set {_vehicleProps = newValue}
+  }
+  /// Returns true if `vehicleProps` has been explicitly set.
+  var hasVehicleProps: Bool {self._vehicleProps != nil}
+  /// Clears the value of `vehicleProps`. Subsequent reads from it will return its default value.
+  mutating func clearVehicleProps() {self._vehicleProps = nil}
+
+  var reason: String {
+    get {_reason ?? String()}
+    set {_reason = newValue}
+  }
+  /// Returns true if `reason` has been explicitly set.
+  var hasReason: Bool {self._reason != nil}
+  /// Clears the value of `reason`. Subsequent reads from it will return its default value.
+  mutating func clearReason() {self._reason = nil}
+
+  var sourceUser: Services_Sync_SourceUser {
+    get {_sourceUser ?? Services_Sync_SourceUser()}
+    set {_sourceUser = newValue}
+  }
+  /// Returns true if `sourceUser` has been explicitly set.
+  var hasSourceUser: Bool {self._sourceUser != nil}
+  /// Clears the value of `sourceUser`. Subsequent reads from it will return its default value.
+  mutating func clearSourceUser() {self._sourceUser = nil}
+
+  var unknownFields = SwiftProtobuf.UnknownStorage()
+
+  init() {}
+
+  fileprivate var _vehicleProps: Resources_Vehicles_Props_VehicleProps? = nil
+  fileprivate var _reason: String? = nil
+  fileprivate var _sourceUser: Services_Sync_SourceUser? = nil
+}
+
+nonisolated struct Services_Sync_SetVehiclePropsResponse: Sendable {
+  // SwiftProtobuf.Message conformance is added in an extension below. See the
+  // `Message` and `Message+*Additions` files in the SwiftProtobuf library for
+  // methods supported on all messages.
+
+  var vehicleProps: Resources_Vehicles_Props_VehicleProps {
+    get {_vehicleProps ?? Resources_Vehicles_Props_VehicleProps()}
+    set {_vehicleProps = newValue}
+  }
+  /// Returns true if `vehicleProps` has been explicitly set.
+  var hasVehicleProps: Bool {self._vehicleProps != nil}
+  /// Clears the value of `vehicleProps`. Subsequent reads from it will return its default value.
+  mutating func clearVehicleProps() {self._vehicleProps = nil}
+
+  var unknownFields = SwiftProtobuf.UnknownStorage()
+
+  init() {}
+
+  fileprivate var _vehicleProps: Resources_Vehicles_Props_VehicleProps? = nil
+}
+
 nonisolated struct Services_Sync_AddColleagueActivityRequest: Sendable {
   // SwiftProtobuf.Message conformance is added in an extension below. See the
   // `Message` and `Message+*Additions` files in the SwiftProtobuf library for
@@ -459,11 +605,21 @@ nonisolated struct Services_Sync_AddColleagueActivityRequest: Sendable {
   /// Clears the value of `colleagueActivity`. Subsequent reads from it will return its default value.
   mutating func clearColleagueActivity() {self._colleagueActivity = nil}
 
+  var sourceUser: Services_Sync_SourceUser {
+    get {_sourceUser ?? Services_Sync_SourceUser()}
+    set {_sourceUser = newValue}
+  }
+  /// Returns true if `sourceUser` has been explicitly set.
+  var hasSourceUser: Bool {self._sourceUser != nil}
+  /// Clears the value of `sourceUser`. Subsequent reads from it will return its default value.
+  mutating func clearSourceUser() {self._sourceUser = nil}
+
   var unknownFields = SwiftProtobuf.UnknownStorage()
 
   init() {}
 
   fileprivate var _colleagueActivity: Resources_Jobs_Colleagues_Activity_ColleagueActivity? = nil
+  fileprivate var _sourceUser: Services_Sync_SourceUser? = nil
 }
 
 nonisolated struct Services_Sync_AddColleaguePropsRequest: Sendable {
@@ -480,11 +636,21 @@ nonisolated struct Services_Sync_AddColleaguePropsRequest: Sendable {
   /// Clears the value of `colleagueProps`. Subsequent reads from it will return its default value.
   mutating func clearColleagueProps() {self._colleagueProps = nil}
 
+  var sourceUser: Services_Sync_SourceUser {
+    get {_sourceUser ?? Services_Sync_SourceUser()}
+    set {_sourceUser = newValue}
+  }
+  /// Returns true if `sourceUser` has been explicitly set.
+  var hasSourceUser: Bool {self._sourceUser != nil}
+  /// Clears the value of `sourceUser`. Subsequent reads from it will return its default value.
+  mutating func clearSourceUser() {self._sourceUser = nil}
+
   var unknownFields = SwiftProtobuf.UnknownStorage()
 
   init() {}
 
   fileprivate var _colleagueProps: Resources_Sync_Activity_ColleagueProps? = nil
+  fileprivate var _sourceUser: Services_Sync_SourceUser? = nil
 }
 
 nonisolated struct Services_Sync_AddJobTimeclockRequest: Sendable {
@@ -998,11 +1164,38 @@ nonisolated struct Services_Sync_StreamRequest: Sendable {
   /// Clears the value of `version`. Subsequent reads from it will return its default value.
   mutating func clearVersion() {self._version = nil}
 
+  var data: Services_Sync_StreamRequest.OneOf_Data? = nil
+
+  var syncState: Services_Sync_ClientSyncState {
+    get {
+      if case .syncState(let v)? = data {return v}
+      return Services_Sync_ClientSyncState()
+    }
+    set {data = .syncState(newValue)}
+  }
+
   var unknownFields = SwiftProtobuf.UnknownStorage()
+
+  nonisolated enum OneOf_Data: Equatable, Sendable {
+    case syncState(Services_Sync_ClientSyncState)
+
+  }
 
   init() {}
 
   fileprivate var _version: String? = nil
+}
+
+nonisolated struct Services_Sync_ClientSyncState: Sendable {
+  // SwiftProtobuf.Message conformance is added in an extension below. See the
+  // `Message` and `Message+*Additions` files in the SwiftProtobuf library for
+  // methods supported on all messages.
+
+  var tables: [Resources_Dbsync_DBSyncTableSyncState] = []
+
+  var unknownFields = SwiftProtobuf.UnknownStorage()
+
+  init() {}
 }
 
 // MARK: - Code below here is support for the SwiftProtobuf runtime.
@@ -1087,6 +1280,45 @@ nonisolated extension Services_Sync_GetStatusResponse: SwiftProtobuf.Message, Sw
     if lhs._users != rhs._users {return false}
     if lhs._vehicles != rhs._vehicles {return false}
     if lhs._accounts != rhs._accounts {return false}
+    if lhs.unknownFields != rhs.unknownFields {return false}
+    return true
+  }
+}
+
+nonisolated extension Services_Sync_SourceUser: SwiftProtobuf.Message, SwiftProtobuf._MessageImplementationBase, SwiftProtobuf._ProtoNameProviding {
+  static let protoMessageName: String = _protobuf_package + ".SourceUser"
+  static let _protobuf_nameMap = SwiftProtobuf._NameMap(bytecode: "\0\u{3}user_id\0\u{1}job\0")
+
+  mutating func decodeMessage<D: SwiftProtobuf.Decoder>(decoder: inout D) throws {
+    while let fieldNumber = try decoder.nextFieldNumber() {
+      // The use of inline closures is to circumvent an issue where the compiler
+      // allocates stack space for every case branch when no optimizations are
+      // enabled. https://github.com/apple/swift-protobuf/issues/1034
+      switch fieldNumber {
+      case 1: try { try decoder.decodeSingularInt32Field(value: &self._userID) }()
+      case 2: try { try decoder.decodeSingularStringField(value: &self._job) }()
+      default: break
+      }
+    }
+  }
+
+  func traverse<V: SwiftProtobuf.Visitor>(visitor: inout V) throws {
+    // The use of inline closures is to circumvent an issue where the compiler
+    // allocates stack space for every if/case branch local when no optimizations
+    // are enabled. https://github.com/apple/swift-protobuf/issues/1034 and
+    // https://github.com/apple/swift-protobuf/issues/1182
+    try { if let v = self._userID {
+      try visitor.visitSingularInt32Field(value: v, fieldNumber: 1)
+    } }()
+    try { if let v = self._job {
+      try visitor.visitSingularStringField(value: v, fieldNumber: 2)
+    } }()
+    try unknownFields.traverse(visitor: &visitor)
+  }
+
+  static func ==(lhs: Services_Sync_SourceUser, rhs: Services_Sync_SourceUser) -> Bool {
+    if lhs._userID != rhs._userID {return false}
+    if lhs._job != rhs._job {return false}
     if lhs.unknownFields != rhs.unknownFields {return false}
     return true
   }
@@ -1496,7 +1728,7 @@ nonisolated extension Services_Sync_CloseUserDispatchesResponse: SwiftProtobuf.M
 
 nonisolated extension Services_Sync_AddUserActivityRequest: SwiftProtobuf.Message, SwiftProtobuf._MessageImplementationBase, SwiftProtobuf._ProtoNameProviding {
   static let protoMessageName: String = _protobuf_package + ".AddUserActivityRequest"
-  static let _protobuf_nameMap = SwiftProtobuf._NameMap(bytecode: "\0\u{3}user_activity\0")
+  static let _protobuf_nameMap = SwiftProtobuf._NameMap(bytecode: "\0\u{3}user_activity\0\u{3}source_user\0")
 
   mutating func decodeMessage<D: SwiftProtobuf.Decoder>(decoder: inout D) throws {
     while let fieldNumber = try decoder.nextFieldNumber() {
@@ -1505,6 +1737,7 @@ nonisolated extension Services_Sync_AddUserActivityRequest: SwiftProtobuf.Messag
       // enabled. https://github.com/apple/swift-protobuf/issues/1034
       switch fieldNumber {
       case 1: try { try decoder.decodeSingularMessageField(value: &self._userActivity) }()
+      case 2: try { try decoder.decodeSingularMessageField(value: &self._sourceUser) }()
       default: break
       }
     }
@@ -1518,11 +1751,15 @@ nonisolated extension Services_Sync_AddUserActivityRequest: SwiftProtobuf.Messag
     try { if let v = self._userActivity {
       try visitor.visitSingularMessageField(value: v, fieldNumber: 1)
     } }()
+    try { if let v = self._sourceUser {
+      try visitor.visitSingularMessageField(value: v, fieldNumber: 2)
+    } }()
     try unknownFields.traverse(visitor: &visitor)
   }
 
   static func ==(lhs: Services_Sync_AddUserActivityRequest, rhs: Services_Sync_AddUserActivityRequest) -> Bool {
     if lhs._userActivity != rhs._userActivity {return false}
+    if lhs._sourceUser != rhs._sourceUser {return false}
     if lhs.unknownFields != rhs.unknownFields {return false}
     return true
   }
@@ -1530,7 +1767,7 @@ nonisolated extension Services_Sync_AddUserActivityRequest: SwiftProtobuf.Messag
 
 nonisolated extension Services_Sync_AddUserPropsRequest: SwiftProtobuf.Message, SwiftProtobuf._MessageImplementationBase, SwiftProtobuf._ProtoNameProviding {
   static let protoMessageName: String = _protobuf_package + ".AddUserPropsRequest"
-  static let _protobuf_nameMap = SwiftProtobuf._NameMap(bytecode: "\0\u{3}user_props\0")
+  static let _protobuf_nameMap = SwiftProtobuf._NameMap(bytecode: "\0\u{3}user_props\0\u{3}source_user\0")
 
   mutating func decodeMessage<D: SwiftProtobuf.Decoder>(decoder: inout D) throws {
     while let fieldNumber = try decoder.nextFieldNumber() {
@@ -1539,6 +1776,7 @@ nonisolated extension Services_Sync_AddUserPropsRequest: SwiftProtobuf.Message, 
       // enabled. https://github.com/apple/swift-protobuf/issues/1034
       switch fieldNumber {
       case 1: try { try decoder.decodeSingularMessageField(value: &self._userProps) }()
+      case 2: try { try decoder.decodeSingularMessageField(value: &self._sourceUser) }()
       default: break
       }
     }
@@ -1552,11 +1790,15 @@ nonisolated extension Services_Sync_AddUserPropsRequest: SwiftProtobuf.Message, 
     try { if let v = self._userProps {
       try visitor.visitSingularMessageField(value: v, fieldNumber: 1)
     } }()
+    try { if let v = self._sourceUser {
+      try visitor.visitSingularMessageField(value: v, fieldNumber: 2)
+    } }()
     try unknownFields.traverse(visitor: &visitor)
   }
 
   static func ==(lhs: Services_Sync_AddUserPropsRequest, rhs: Services_Sync_AddUserPropsRequest) -> Bool {
     if lhs._userProps != rhs._userProps {return false}
+    if lhs._sourceUser != rhs._sourceUser {return false}
     if lhs.unknownFields != rhs.unknownFields {return false}
     return true
   }
@@ -1626,9 +1868,151 @@ nonisolated extension Services_Sync_GetUserPropsResponse: SwiftProtobuf.Message,
   }
 }
 
+nonisolated extension Services_Sync_GetVehiclePropsRequest: SwiftProtobuf.Message, SwiftProtobuf._MessageImplementationBase, SwiftProtobuf._ProtoNameProviding {
+  static let protoMessageName: String = _protobuf_package + ".GetVehiclePropsRequest"
+  static let _protobuf_nameMap = SwiftProtobuf._NameMap(bytecode: "\0\u{1}plate\0")
+
+  mutating func decodeMessage<D: SwiftProtobuf.Decoder>(decoder: inout D) throws {
+    while let fieldNumber = try decoder.nextFieldNumber() {
+      // The use of inline closures is to circumvent an issue where the compiler
+      // allocates stack space for every case branch when no optimizations are
+      // enabled. https://github.com/apple/swift-protobuf/issues/1034
+      switch fieldNumber {
+      case 1: try { try decoder.decodeSingularStringField(value: &self.plate) }()
+      default: break
+      }
+    }
+  }
+
+  func traverse<V: SwiftProtobuf.Visitor>(visitor: inout V) throws {
+    if !self.plate.isEmpty {
+      try visitor.visitSingularStringField(value: self.plate, fieldNumber: 1)
+    }
+    try unknownFields.traverse(visitor: &visitor)
+  }
+
+  static func ==(lhs: Services_Sync_GetVehiclePropsRequest, rhs: Services_Sync_GetVehiclePropsRequest) -> Bool {
+    if lhs.plate != rhs.plate {return false}
+    if lhs.unknownFields != rhs.unknownFields {return false}
+    return true
+  }
+}
+
+nonisolated extension Services_Sync_GetVehiclePropsResponse: SwiftProtobuf.Message, SwiftProtobuf._MessageImplementationBase, SwiftProtobuf._ProtoNameProviding {
+  static let protoMessageName: String = _protobuf_package + ".GetVehiclePropsResponse"
+  static let _protobuf_nameMap = SwiftProtobuf._NameMap(bytecode: "\0\u{3}vehicle_props\0")
+
+  mutating func decodeMessage<D: SwiftProtobuf.Decoder>(decoder: inout D) throws {
+    while let fieldNumber = try decoder.nextFieldNumber() {
+      // The use of inline closures is to circumvent an issue where the compiler
+      // allocates stack space for every case branch when no optimizations are
+      // enabled. https://github.com/apple/swift-protobuf/issues/1034
+      switch fieldNumber {
+      case 1: try { try decoder.decodeSingularMessageField(value: &self._vehicleProps) }()
+      default: break
+      }
+    }
+  }
+
+  func traverse<V: SwiftProtobuf.Visitor>(visitor: inout V) throws {
+    // The use of inline closures is to circumvent an issue where the compiler
+    // allocates stack space for every if/case branch local when no optimizations
+    // are enabled. https://github.com/apple/swift-protobuf/issues/1034 and
+    // https://github.com/apple/swift-protobuf/issues/1182
+    try { if let v = self._vehicleProps {
+      try visitor.visitSingularMessageField(value: v, fieldNumber: 1)
+    } }()
+    try unknownFields.traverse(visitor: &visitor)
+  }
+
+  static func ==(lhs: Services_Sync_GetVehiclePropsResponse, rhs: Services_Sync_GetVehiclePropsResponse) -> Bool {
+    if lhs._vehicleProps != rhs._vehicleProps {return false}
+    if lhs.unknownFields != rhs.unknownFields {return false}
+    return true
+  }
+}
+
+nonisolated extension Services_Sync_SetVehiclePropsRequest: SwiftProtobuf.Message, SwiftProtobuf._MessageImplementationBase, SwiftProtobuf._ProtoNameProviding {
+  static let protoMessageName: String = _protobuf_package + ".SetVehiclePropsRequest"
+  static let _protobuf_nameMap = SwiftProtobuf._NameMap(bytecode: "\0\u{3}vehicle_props\0\u{1}reason\0\u{3}source_user\0")
+
+  mutating func decodeMessage<D: SwiftProtobuf.Decoder>(decoder: inout D) throws {
+    while let fieldNumber = try decoder.nextFieldNumber() {
+      // The use of inline closures is to circumvent an issue where the compiler
+      // allocates stack space for every case branch when no optimizations are
+      // enabled. https://github.com/apple/swift-protobuf/issues/1034
+      switch fieldNumber {
+      case 1: try { try decoder.decodeSingularMessageField(value: &self._vehicleProps) }()
+      case 2: try { try decoder.decodeSingularStringField(value: &self._reason) }()
+      case 3: try { try decoder.decodeSingularMessageField(value: &self._sourceUser) }()
+      default: break
+      }
+    }
+  }
+
+  func traverse<V: SwiftProtobuf.Visitor>(visitor: inout V) throws {
+    // The use of inline closures is to circumvent an issue where the compiler
+    // allocates stack space for every if/case branch local when no optimizations
+    // are enabled. https://github.com/apple/swift-protobuf/issues/1034 and
+    // https://github.com/apple/swift-protobuf/issues/1182
+    try { if let v = self._vehicleProps {
+      try visitor.visitSingularMessageField(value: v, fieldNumber: 1)
+    } }()
+    try { if let v = self._reason {
+      try visitor.visitSingularStringField(value: v, fieldNumber: 2)
+    } }()
+    try { if let v = self._sourceUser {
+      try visitor.visitSingularMessageField(value: v, fieldNumber: 3)
+    } }()
+    try unknownFields.traverse(visitor: &visitor)
+  }
+
+  static func ==(lhs: Services_Sync_SetVehiclePropsRequest, rhs: Services_Sync_SetVehiclePropsRequest) -> Bool {
+    if lhs._vehicleProps != rhs._vehicleProps {return false}
+    if lhs._reason != rhs._reason {return false}
+    if lhs._sourceUser != rhs._sourceUser {return false}
+    if lhs.unknownFields != rhs.unknownFields {return false}
+    return true
+  }
+}
+
+nonisolated extension Services_Sync_SetVehiclePropsResponse: SwiftProtobuf.Message, SwiftProtobuf._MessageImplementationBase, SwiftProtobuf._ProtoNameProviding {
+  static let protoMessageName: String = _protobuf_package + ".SetVehiclePropsResponse"
+  static let _protobuf_nameMap = SwiftProtobuf._NameMap(bytecode: "\0\u{3}vehicle_props\0")
+
+  mutating func decodeMessage<D: SwiftProtobuf.Decoder>(decoder: inout D) throws {
+    while let fieldNumber = try decoder.nextFieldNumber() {
+      // The use of inline closures is to circumvent an issue where the compiler
+      // allocates stack space for every case branch when no optimizations are
+      // enabled. https://github.com/apple/swift-protobuf/issues/1034
+      switch fieldNumber {
+      case 1: try { try decoder.decodeSingularMessageField(value: &self._vehicleProps) }()
+      default: break
+      }
+    }
+  }
+
+  func traverse<V: SwiftProtobuf.Visitor>(visitor: inout V) throws {
+    // The use of inline closures is to circumvent an issue where the compiler
+    // allocates stack space for every if/case branch local when no optimizations
+    // are enabled. https://github.com/apple/swift-protobuf/issues/1034 and
+    // https://github.com/apple/swift-protobuf/issues/1182
+    try { if let v = self._vehicleProps {
+      try visitor.visitSingularMessageField(value: v, fieldNumber: 1)
+    } }()
+    try unknownFields.traverse(visitor: &visitor)
+  }
+
+  static func ==(lhs: Services_Sync_SetVehiclePropsResponse, rhs: Services_Sync_SetVehiclePropsResponse) -> Bool {
+    if lhs._vehicleProps != rhs._vehicleProps {return false}
+    if lhs.unknownFields != rhs.unknownFields {return false}
+    return true
+  }
+}
+
 nonisolated extension Services_Sync_AddColleagueActivityRequest: SwiftProtobuf.Message, SwiftProtobuf._MessageImplementationBase, SwiftProtobuf._ProtoNameProviding {
   static let protoMessageName: String = _protobuf_package + ".AddColleagueActivityRequest"
-  static let _protobuf_nameMap = SwiftProtobuf._NameMap(bytecode: "\0\u{3}colleague_activity\0")
+  static let _protobuf_nameMap = SwiftProtobuf._NameMap(bytecode: "\0\u{3}colleague_activity\0\u{3}source_user\0")
 
   mutating func decodeMessage<D: SwiftProtobuf.Decoder>(decoder: inout D) throws {
     while let fieldNumber = try decoder.nextFieldNumber() {
@@ -1637,6 +2021,7 @@ nonisolated extension Services_Sync_AddColleagueActivityRequest: SwiftProtobuf.M
       // enabled. https://github.com/apple/swift-protobuf/issues/1034
       switch fieldNumber {
       case 1: try { try decoder.decodeSingularMessageField(value: &self._colleagueActivity) }()
+      case 2: try { try decoder.decodeSingularMessageField(value: &self._sourceUser) }()
       default: break
       }
     }
@@ -1650,11 +2035,15 @@ nonisolated extension Services_Sync_AddColleagueActivityRequest: SwiftProtobuf.M
     try { if let v = self._colleagueActivity {
       try visitor.visitSingularMessageField(value: v, fieldNumber: 1)
     } }()
+    try { if let v = self._sourceUser {
+      try visitor.visitSingularMessageField(value: v, fieldNumber: 2)
+    } }()
     try unknownFields.traverse(visitor: &visitor)
   }
 
   static func ==(lhs: Services_Sync_AddColleagueActivityRequest, rhs: Services_Sync_AddColleagueActivityRequest) -> Bool {
     if lhs._colleagueActivity != rhs._colleagueActivity {return false}
+    if lhs._sourceUser != rhs._sourceUser {return false}
     if lhs.unknownFields != rhs.unknownFields {return false}
     return true
   }
@@ -1662,7 +2051,7 @@ nonisolated extension Services_Sync_AddColleagueActivityRequest: SwiftProtobuf.M
 
 nonisolated extension Services_Sync_AddColleaguePropsRequest: SwiftProtobuf.Message, SwiftProtobuf._MessageImplementationBase, SwiftProtobuf._ProtoNameProviding {
   static let protoMessageName: String = _protobuf_package + ".AddColleaguePropsRequest"
-  static let _protobuf_nameMap = SwiftProtobuf._NameMap(bytecode: "\0\u{3}colleague_props\0")
+  static let _protobuf_nameMap = SwiftProtobuf._NameMap(bytecode: "\0\u{3}colleague_props\0\u{3}source_user\0")
 
   mutating func decodeMessage<D: SwiftProtobuf.Decoder>(decoder: inout D) throws {
     while let fieldNumber = try decoder.nextFieldNumber() {
@@ -1671,6 +2060,7 @@ nonisolated extension Services_Sync_AddColleaguePropsRequest: SwiftProtobuf.Mess
       // enabled. https://github.com/apple/swift-protobuf/issues/1034
       switch fieldNumber {
       case 1: try { try decoder.decodeSingularMessageField(value: &self._colleagueProps) }()
+      case 2: try { try decoder.decodeSingularMessageField(value: &self._sourceUser) }()
       default: break
       }
     }
@@ -1684,11 +2074,15 @@ nonisolated extension Services_Sync_AddColleaguePropsRequest: SwiftProtobuf.Mess
     try { if let v = self._colleagueProps {
       try visitor.visitSingularMessageField(value: v, fieldNumber: 1)
     } }()
+    try { if let v = self._sourceUser {
+      try visitor.visitSingularMessageField(value: v, fieldNumber: 2)
+    } }()
     try unknownFields.traverse(visitor: &visitor)
   }
 
   static func ==(lhs: Services_Sync_AddColleaguePropsRequest, rhs: Services_Sync_AddColleaguePropsRequest) -> Bool {
     if lhs._colleagueProps != rhs._colleagueProps {return false}
+    if lhs._sourceUser != rhs._sourceUser {return false}
     if lhs.unknownFields != rhs.unknownFields {return false}
     return true
   }
@@ -2631,7 +3025,7 @@ nonisolated extension Services_Sync_DeleteDataResponse: SwiftProtobuf.Message, S
 
 nonisolated extension Services_Sync_StreamRequest: SwiftProtobuf.Message, SwiftProtobuf._MessageImplementationBase, SwiftProtobuf._ProtoNameProviding {
   static let protoMessageName: String = _protobuf_package + ".StreamRequest"
-  static let _protobuf_nameMap = SwiftProtobuf._NameMap(bytecode: "\0\u{1}version\0")
+  static let _protobuf_nameMap = SwiftProtobuf._NameMap(bytecode: "\0\u{1}version\0\u{3}sync_state\0")
 
   mutating func decodeMessage<D: SwiftProtobuf.Decoder>(decoder: inout D) throws {
     while let fieldNumber = try decoder.nextFieldNumber() {
@@ -2640,6 +3034,19 @@ nonisolated extension Services_Sync_StreamRequest: SwiftProtobuf.Message, SwiftP
       // enabled. https://github.com/apple/swift-protobuf/issues/1034
       switch fieldNumber {
       case 1: try { try decoder.decodeSingularStringField(value: &self._version) }()
+      case 2: try {
+        var v: Services_Sync_ClientSyncState?
+        var hadOneofValue = false
+        if let current = self.data {
+          hadOneofValue = true
+          if case .syncState(let m) = current {v = m}
+        }
+        try decoder.decodeSingularMessageField(value: &v)
+        if let v = v {
+          if hadOneofValue {try decoder.handleConflictingOneOf()}
+          self.data = .syncState(v)
+        }
+      }()
       default: break
       }
     }
@@ -2653,11 +3060,45 @@ nonisolated extension Services_Sync_StreamRequest: SwiftProtobuf.Message, SwiftP
     try { if let v = self._version {
       try visitor.visitSingularStringField(value: v, fieldNumber: 1)
     } }()
+    try { if case .syncState(let v)? = self.data {
+      try visitor.visitSingularMessageField(value: v, fieldNumber: 2)
+    } }()
     try unknownFields.traverse(visitor: &visitor)
   }
 
   static func ==(lhs: Services_Sync_StreamRequest, rhs: Services_Sync_StreamRequest) -> Bool {
     if lhs._version != rhs._version {return false}
+    if lhs.data != rhs.data {return false}
+    if lhs.unknownFields != rhs.unknownFields {return false}
+    return true
+  }
+}
+
+nonisolated extension Services_Sync_ClientSyncState: SwiftProtobuf.Message, SwiftProtobuf._MessageImplementationBase, SwiftProtobuf._ProtoNameProviding {
+  static let protoMessageName: String = _protobuf_package + ".ClientSyncState"
+  static let _protobuf_nameMap = SwiftProtobuf._NameMap(bytecode: "\0\u{1}tables\0")
+
+  mutating func decodeMessage<D: SwiftProtobuf.Decoder>(decoder: inout D) throws {
+    while let fieldNumber = try decoder.nextFieldNumber() {
+      // The use of inline closures is to circumvent an issue where the compiler
+      // allocates stack space for every case branch when no optimizations are
+      // enabled. https://github.com/apple/swift-protobuf/issues/1034
+      switch fieldNumber {
+      case 1: try { try decoder.decodeRepeatedMessageField(value: &self.tables) }()
+      default: break
+      }
+    }
+  }
+
+  func traverse<V: SwiftProtobuf.Visitor>(visitor: inout V) throws {
+    if !self.tables.isEmpty {
+      try visitor.visitRepeatedMessageField(value: self.tables, fieldNumber: 1)
+    }
+    try unknownFields.traverse(visitor: &visitor)
+  }
+
+  static func ==(lhs: Services_Sync_ClientSyncState, rhs: Services_Sync_ClientSyncState) -> Bool {
+    if lhs.tables != rhs.tables {return false}
     if lhs.unknownFields != rhs.unknownFields {return false}
     return true
   }

@@ -362,8 +362,8 @@ nonisolated struct Resources_Centrum_Dispatches_Dispatch: @unchecked Sendable {
   /// Clears the value of `creatorID`. Subsequent reads from it will return its default value.
   mutating func clearCreatorID() {_uniqueStorage()._creatorID = nil}
 
-  var creator: Resources_Users_User {
-    get {_storage._creator ?? Resources_Users_User()}
+  var creator: Resources_Users_Short_UserShort {
+    get {_storage._creator ?? Resources_Users_Short_UserShort()}
     set {_uniqueStorage()._creator = newValue}
   }
   /// Returns true if `creator` has been explicitly set.
@@ -657,7 +657,7 @@ nonisolated extension Resources_Centrum_Dispatches_Dispatch: SwiftProtobuf.Messa
     var _postal: String? = nil
     var _anon: Bool = false
     var _creatorID: Int32? = nil
-    var _creator: Resources_Users_User? = nil
+    var _creator: Resources_Users_Short_UserShort? = nil
     var _units: [Resources_Centrum_Dispatches_DispatchAssignment] = []
     var _references: Resources_Centrum_Dispatches_DispatchReferences? = nil
 

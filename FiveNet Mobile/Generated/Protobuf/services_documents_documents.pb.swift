@@ -492,21 +492,21 @@ nonisolated struct Services_Documents_CreateDocumentRequest: Sendable {
   /// Clears the value of `templateID`. Subsequent reads from it will return its default value.
   mutating func clearTemplateID() {self._templateID = nil}
 
-  var templateData: Resources_Documents_Templates_TemplateData {
-    get {_templateData ?? Resources_Documents_Templates_TemplateData()}
-    set {_templateData = newValue}
+  var templateSelection: Resources_Documents_Templates_TemplateSelection {
+    get {_templateSelection ?? Resources_Documents_Templates_TemplateSelection()}
+    set {_templateSelection = newValue}
   }
-  /// Returns true if `templateData` has been explicitly set.
-  var hasTemplateData: Bool {self._templateData != nil}
-  /// Clears the value of `templateData`. Subsequent reads from it will return its default value.
-  mutating func clearTemplateData() {self._templateData = nil}
+  /// Returns true if `templateSelection` has been explicitly set.
+  var hasTemplateSelection: Bool {self._templateSelection != nil}
+  /// Clears the value of `templateSelection`. Subsequent reads from it will return its default value.
+  mutating func clearTemplateSelection() {self._templateSelection = nil}
 
   var unknownFields = SwiftProtobuf.UnknownStorage()
 
   init() {}
 
   fileprivate var _templateID: Int64? = nil
-  fileprivate var _templateData: Resources_Documents_Templates_TemplateData? = nil
+  fileprivate var _templateSelection: Resources_Documents_Templates_TemplateSelection? = nil
 }
 
 nonisolated struct Services_Documents_CreateDocumentResponse: Sendable {
@@ -1874,7 +1874,7 @@ nonisolated extension Services_Documents_ChangeDocumentOwnerResponse: SwiftProto
 
 nonisolated extension Services_Documents_CreateDocumentRequest: SwiftProtobuf.Message, SwiftProtobuf._MessageImplementationBase, SwiftProtobuf._ProtoNameProviding {
   static let protoMessageName: String = _protobuf_package + ".CreateDocumentRequest"
-  static let _protobuf_nameMap = SwiftProtobuf._NameMap(bytecode: "\0\u{3}content_type\0\u{3}template_id\0\u{3}template_data\0")
+  static let _protobuf_nameMap = SwiftProtobuf._NameMap(bytecode: "\0\u{3}content_type\0\u{3}template_id\0\u{4}\u{2}template_selection\0\u{c}\u{3}\u{1}")
 
   mutating func decodeMessage<D: SwiftProtobuf.Decoder>(decoder: inout D) throws {
     while let fieldNumber = try decoder.nextFieldNumber() {
@@ -1884,7 +1884,7 @@ nonisolated extension Services_Documents_CreateDocumentRequest: SwiftProtobuf.Me
       switch fieldNumber {
       case 1: try { try decoder.decodeSingularEnumField(value: &self.contentType) }()
       case 2: try { try decoder.decodeSingularInt64Field(value: &self._templateID) }()
-      case 3: try { try decoder.decodeSingularMessageField(value: &self._templateData) }()
+      case 4: try { try decoder.decodeSingularMessageField(value: &self._templateSelection) }()
       default: break
       }
     }
@@ -1901,8 +1901,8 @@ nonisolated extension Services_Documents_CreateDocumentRequest: SwiftProtobuf.Me
     try { if let v = self._templateID {
       try visitor.visitSingularInt64Field(value: v, fieldNumber: 2)
     } }()
-    try { if let v = self._templateData {
-      try visitor.visitSingularMessageField(value: v, fieldNumber: 3)
+    try { if let v = self._templateSelection {
+      try visitor.visitSingularMessageField(value: v, fieldNumber: 4)
     } }()
     try unknownFields.traverse(visitor: &visitor)
   }
@@ -1910,7 +1910,7 @@ nonisolated extension Services_Documents_CreateDocumentRequest: SwiftProtobuf.Me
   static func ==(lhs: Services_Documents_CreateDocumentRequest, rhs: Services_Documents_CreateDocumentRequest) -> Bool {
     if lhs.contentType != rhs.contentType {return false}
     if lhs._templateID != rhs._templateID {return false}
-    if lhs._templateData != rhs._templateData {return false}
+    if lhs._templateSelection != rhs._templateSelection {return false}
     if lhs.unknownFields != rhs.unknownFields {return false}
     return true
   }

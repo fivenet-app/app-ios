@@ -37,8 +37,17 @@ struct QualificationDetailView: View {
     @State private var requestForStatus: Resources_Qualifications_QualificationRequest?
     @State private var gradeUser: GradeUser?
     @State private var showCreateResult = false
+    @State private var showEdit = false
+
+    @State private var requestSearch = ""
+    @State private var resultSearch = ""
+    @State private var requestSearchTask: Task<Void, Never>?
+    @State private var resultSearchTask: Task<Void, Never>?
 
     private static let tutorPageSize: Int64 = 10
+
+    /// Größere Seiten für den clientseitigen Suchfallback (weniger Round-Trips).
+    private static let fetchPageSize: Int64 = 100
 
     enum Tab: String, CaseIterable, Identifiable {
         case info = "Inhalt"
@@ -147,6 +156,27 @@ struct QualificationDetailView: View {
                 await loadResults(page: resultPage)
             }
             .environment(appState)
+        }
+        .sheet(isPresented: $showEdit) {
+            if let qualification {
+                QualificationEditorSheet(qualification: qualification) { _ in
+                    showEdit = false
+                    Task { await load() }
+                }
+                .environment(appState)
+            }
+        }
+        .toolbar {
+            if let qualification, canEdit(qualification) {
+                ToolbarItem(placement: .topBarTrailing) {
+                    Button {
+                        showEdit = true
+                    } label: {
+                        Image(systemName: "pencil")
+                            .font(.body.weight(.semibold))
+                    }
+                }
+            }
         }
         .confirmationDialog("Anfrage löschen?", isPresented: Binding(
             get: { requestForDelete != nil },
@@ -482,6 +512,11 @@ struct QualificationDetailView: View {
     @ViewBuilder
     private func tutorSections(_ qualification: Resources_Qualifications_Qualification) -> some View {
         Section("Anfragen") {
+            tutorSearchField($requestSearch, prompt: "Nach Kollegen suchen")
+                .onChange(of: requestSearch) { _, _ in
+                    debounceRequestSearch()
+                }
+
             if let requestError {
                 Label(requestError, systemImage: "exclamationmark.triangle.fill")
                     .foregroundStyle(Theme.Palette.danger)
@@ -552,6 +587,11 @@ struct QualificationDetailView: View {
                 .accessibilityLabel("Ergebnis hinzufügen")
             }
             .listRowSeparator(.hidden)
+
+            tutorSearchField($resultSearch, prompt: "Nach Kollegen suchen")
+                .onChange(of: resultSearch) { _, _ in
+                    debounceResultSearch()
+                }
         }
         Section {
             if let resultError {
@@ -610,40 +650,160 @@ struct QualificationDetailView: View {
     }
 
     private func loadRequests(page: Int64) async {
-        guard let qualification else { return }
+        guard qualification != nil else { return }
         requestPage = page
         isLoadingRequests = true
         requestError = nil
         defer { isLoadingRequests = false }
         do {
-            let response = try await appState.listQualificationRequests(
-                qualificationID: qualification.id,
-                offset: page * Self.tutorPageSize,
-                pageSize: Self.tutorPageSize
-            )
-            requests = response.requests
-            requestTotal = response.pagination.totalCount
+            let trimmed = requestSearch.trimmingCharacters(in: .whitespacesAndNewlines)
+            let (rows, total) = try await fetchRequests(term: trimmed, page: page)
+            requests = rows
+            requestTotal = total
         } catch {
             requestError = error.localizedDescription
         }
     }
 
+    /// Fetcht eine Seite der Anfragen. Ohne Suchbegriff wird die echte
+    /// Server-Pagination genutzt; bei aktivem Suchbegriff liest ein Fallback die
+    /// gesamte (unaufgeteilte) Menge aus, weil Server < v2026.8.5 den `search`-Filter
+    /// ignorieren — und filtert clientseitig (Web `RequestList.vue` sucht über Name).
+    private func fetchRequests(term: String, page: Int64) async throws -> ([Resources_Qualifications_QualificationRequest], Int64) {
+        guard let qualification else { return ([], 0) }
+        let lowered = term.lowercased()
+        let response = try await appState.listQualificationRequests(
+            qualificationID: qualification.id,
+            search: lowered.isEmpty ? nil : lowered,
+            offset: page * Self.tutorPageSize,
+            pageSize: Self.tutorPageSize
+        )
+        guard !lowered.isEmpty else {
+            return (response.requests, response.pagination.totalCount)
+        }
+        // Clientseitiger Suchfallback über alle Seiten.
+        var matching: [Resources_Qualifications_QualificationRequest] = []
+        var offset: Int64 = 0
+        var iterations = 0
+        let cap: Int64 = 5000
+        while offset < cap && iterations < 100 {
+            let batch = try await appState.listQualificationRequests(
+                qualificationID: qualification.id,
+                search: nil,
+                offset: offset,
+                pageSize: Self.fetchPageSize
+            )
+            matching += batch.requests.filter { requestMatchesSearch($0, term: lowered) }
+            if batch.requests.count < Self.fetchPageSize { break }
+            offset += Int64(batch.requests.count)
+            iterations += 1
+        }
+        let start = Int(page * Self.tutorPageSize)
+        let window = Array(matching.dropFirst(start).prefix(Int(Self.tutorPageSize)))
+        return (window, Int64(matching.count))
+    }
+
     private func loadResults(page: Int64) async {
-        guard let qualification else { return }
+        guard qualification != nil else { return }
         resultPage = page
         isLoadingResults = true
         resultError = nil
         defer { isLoadingResults = false }
         do {
-            let response = try await appState.listQualificationsResults(
-                qualificationID: qualification.id,
-                offset: page * Self.tutorPageSize,
-                pageSize: Self.tutorPageSize
-            )
-            results = response.results
-            resultTotal = response.pagination.totalCount
+            let trimmed = resultSearch.trimmingCharacters(in: .whitespacesAndNewlines)
+            let (rows, total) = try await fetchResults(term: trimmed, page: page)
+            results = rows
+            resultTotal = total
         } catch {
             resultError = error.localizedDescription
+        }
+    }
+
+    /// Wie `fetchRequests(term:page:)`, nur für Ergebnisse.
+    private func fetchResults(term: String, page: Int64) async throws -> ([Resources_Qualifications_QualificationResult], Int64) {
+        guard let qualification else { return ([], 0) }
+        let lowered = term.lowercased()
+        let response = try await appState.listQualificationsResults(
+            qualificationID: qualification.id,
+            search: lowered.isEmpty ? nil : lowered,
+            offset: page * Self.tutorPageSize,
+            pageSize: Self.tutorPageSize
+        )
+        guard !lowered.isEmpty else {
+            return (response.results, response.pagination.totalCount)
+        }
+        var matching: [Resources_Qualifications_QualificationResult] = []
+        var offset: Int64 = 0
+        var iterations = 0
+        let cap: Int64 = 5000
+        while offset < cap && iterations < 100 {
+            let batch = try await appState.listQualificationsResults(
+                qualificationID: qualification.id,
+                search: nil,
+                offset: offset,
+                pageSize: Self.fetchPageSize
+            )
+            matching += batch.results.filter { resultMatchesSearch($0, term: lowered) }
+            if batch.results.count < Self.fetchPageSize { break }
+            offset += Int64(batch.results.count)
+            iterations += 1
+        }
+        let start = Int(page * Self.tutorPageSize)
+        let window = Array(matching.dropFirst(start).prefix(Int(Self.tutorPageSize)))
+        return (window, Int64(matching.count))
+    }
+
+    private func requestMatchesSearch(_ request: Resources_Qualifications_QualificationRequest, term: String) -> Bool {
+        if request.hasUser, matches(term: term, user: request.user) { return true }
+        return String(request.userID).contains(term) || request.userComment.lowercased().contains(term)
+    }
+
+    private func resultMatchesSearch(_ result: Resources_Qualifications_QualificationResult, term: String) -> Bool {
+        if result.hasUser, matches(term: term, user: result.user) { return true }
+        return String(result.userID).contains(term) || result.summary.lowercased().contains(term)
+    }
+
+    private func matches(term: String, user: Resources_Users_Short_UserShort) -> Bool {
+        userShortName(user).lowercased().contains(term)
+            || user.firstname.lowercased().contains(term)
+            || user.lastname.lowercased().contains(term)
+            || String(user.userID).contains(term)
+    }
+
+    private func tutorSearchField(_ text: Binding<String>, prompt: String) -> some View {
+        HStack(spacing: Theme.Spacing.sm) {
+            Image(systemName: "magnifyingglass")
+                .foregroundStyle(.secondary)
+            TextField(prompt, text: text)
+                .autocorrectionDisabled()
+                .textInputAutocapitalization(.never)
+            if !text.wrappedValue.isEmpty {
+                Button {
+                    text.wrappedValue = ""
+                } label: {
+                    Image(systemName: "xmark.circle.fill")
+                        .foregroundStyle(.secondary)
+                }
+                .buttonStyle(.borderless)
+            }
+        }
+    }
+
+    private func debounceRequestSearch() {
+        requestSearchTask?.cancel()
+        requestSearchTask = Task { @MainActor in
+            try? await Task.sleep(for: .milliseconds(300))
+            guard !Task.isCancelled else { return }
+            await loadRequests(page: 0)
+        }
+    }
+
+    private func debounceResultSearch() {
+        resultSearchTask?.cancel()
+        resultSearchTask = Task { @MainActor in
+            try? await Task.sleep(for: .milliseconds(300))
+            guard !Task.isCancelled else { return }
+            await loadResults(page: 0)
         }
     }
 
@@ -675,6 +835,20 @@ struct QualificationDetailView: View {
     /// Listen-Permissions).
     private func canEditTutor(_ qualification: Resources_Qualifications_Qualification) -> Bool {
         Self.checkQualificationAccess(
+            access: qualification.hasAccess ? qualification.access : nil,
+            creator: qualification.creator,
+            level: 6,
+            creatorJob: qualification.creatorJob,
+            character: appState.character
+        )
+    }
+
+    /// Ob die Qualifikation bearbeitet werden darf (Edit-Button). Web-`View.vue`
+    /// (`Z. 125–133`): `can('qualifications.QualificationsService/UpdateQualification')`
+    /// && `checkQualificationAccess(access, creator, AccessLevel.EDIT, creatorJob)`.
+    private func canEdit(_ qualification: Resources_Qualifications_Qualification) -> Bool {
+        guard appState.can("qualifications.QualificationsService/UpdateQualification") else { return false }
+        return Self.checkQualificationAccess(
             access: qualification.hasAccess ? qualification.access : nil,
             creator: qualification.creator,
             level: 6,
@@ -1157,6 +1331,11 @@ private struct QualificationGradeSheet: View {
                 updated.userID = presetUserID
             } else if let targetUser {
                 updated.userID = targetUser.userID
+            }
+            // The server validates `result.creator_id > 0` on creation (Web
+            // `ResultTutorForm.vue` sends `creatorId: activeChar.userId`).
+            if result == nil, let creatorID = appState.activeCharacterUserID {
+                updated.creatorID = creatorID
             }
             _ = try await appState.createOrUpdateQualificationResult(result: updated)
             await onSaved()

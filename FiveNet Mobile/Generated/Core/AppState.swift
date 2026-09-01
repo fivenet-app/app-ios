@@ -1663,16 +1663,16 @@ final class AppState {
 
     /// Creates a new document from a template and returns the new document id.
     /// When `templateID` is omitted, an empty document is created instead.
-    func createDocument(templateID: Int64? = nil, templateData: Resources_Documents_Templates_TemplateData? = nil) async throws -> Int64 {
+    func createDocument(templateID: Int64? = nil, templateSelection: Resources_Documents_Templates_TemplateSelection? = nil) async throws -> Int64 {
         guard let client else { throw FiveNetError.notConnected }
-        return try await client.createDocument(templateID: templateID, templateData: templateData)
+        return try await client.createDocument(templateID: templateID, templateSelection: templateSelection)
     }
 
     /// Fetches a template with rendered content for diagnostics (surfaces the raw
     /// template render error instead of the sanitized ErrFailedQuery).
-    func getTemplate(templateID: Int64, templateData: Resources_Documents_Templates_TemplateData? = nil, render: Bool = false) async throws -> Resources_Documents_Templates_Template {
+    func getTemplate(templateID: Int64, templateSelection: Resources_Documents_Templates_TemplateSelection? = nil, render: Bool = false) async throws -> Resources_Documents_Templates_Template {
         guard let client else { throw FiveNetError.notConnected }
-        return try await client.getTemplate(templateID: templateID, templateData: templateData, render: render)
+        return try await client.getTemplate(templateID: templateID, templateSelection: templateSelection, render: render)
     }
 
     /// Lists document relations for a given user (citizen "Dokumente" tab).
@@ -2304,16 +2304,28 @@ final class AppState {
         return try await client.getQualification(id: id)
     }
 
-    /// Lists qualification results (own results by default).
-    func listQualificationsResults(qualificationID: Int64? = nil, statuses: [Resources_Qualifications_ResultStatus] = [], userIds: [Int32] = [], offset: Int64 = 0, pageSize: Int64 = 50) async throws -> Services_Qualifications_ListQualificationsResultsResponse {
+    /// Creates a new, empty qualification (web `useQualifications.createQualification`).
+    func createQualification(contentType: Resources_Common_Content_ContentType = .html) async throws -> Services_Qualifications_CreateQualificationResponse {
         guard let client else { throw FiveNetError.notConnected }
-        return try await client.listQualificationsResults(qualificationID: qualificationID, statuses: statuses, userIds: userIds, offset: offset, pageSize: pageSize)
+        return try await client.createQualification(contentType: contentType)
+    }
+
+    /// Updates an existing qualification (web `Editor.vue.updateQualification`).
+    func updateQualification(_ qualification: Resources_Qualifications_Qualification) async throws -> Services_Qualifications_UpdateQualificationResponse {
+        guard let client else { throw FiveNetError.notConnected }
+        return try await client.updateQualification(qualification)
+    }
+
+    /// Lists qualification results (own results by default).
+    func listQualificationsResults(qualificationID: Int64? = nil, statuses: [Resources_Qualifications_ResultStatus] = [], userIds: [Int32] = [], search: String? = nil, offset: Int64 = 0, pageSize: Int64 = 50) async throws -> Services_Qualifications_ListQualificationsResultsResponse {
+        guard let client else { throw FiveNetError.notConnected }
+        return try await client.listQualificationsResults(qualificationID: qualificationID, statuses: statuses, userIds: userIds, search: search, offset: offset, pageSize: pageSize)
     }
 
     /// Lists qualification requests for a specific qualification (tutor view).
-    func listQualificationRequests(qualificationID: Int64, statuses: [Resources_Qualifications_RequestStatus] = [], userIds: [Int32] = [], offset: Int64 = 0, pageSize: Int64 = 10) async throws -> Services_Qualifications_ListQualificationRequestsResponse {
+    func listQualificationRequests(qualificationID: Int64, statuses: [Resources_Qualifications_RequestStatus] = [], userIds: [Int32] = [], search: String? = nil, offset: Int64 = 0, pageSize: Int64 = 10) async throws -> Services_Qualifications_ListQualificationRequestsResponse {
         guard let client else { throw FiveNetError.notConnected }
-        return try await client.listQualificationRequests(qualificationID: qualificationID, statuses: statuses, userIds: userIds, offset: offset, pageSize: pageSize)
+        return try await client.listQualificationRequests(qualificationID: qualificationID, statuses: statuses, userIds: userIds, search: search, offset: offset, pageSize: pageSize)
     }
 
     /// Approves/denies/reopens a qualification request (tutor tab).

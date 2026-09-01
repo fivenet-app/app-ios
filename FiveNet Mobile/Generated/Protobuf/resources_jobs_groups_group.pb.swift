@@ -936,6 +936,9 @@ nonisolated struct Resources_Jobs_Groups_GroupQualificationRule: Sendable {
   /// If true, only completed/successful qualifications count.
   var requireCompleted: Bool = false
 
+  /// Hydrated display data for the UI.
+  var qualifications: [Resources_Qualifications_QualificationShort] = []
+
   var unknownFields = SwiftProtobuf.UnknownStorage()
 
   init() {}
@@ -1640,7 +1643,7 @@ nonisolated extension Resources_Jobs_Groups_GroupGradeRule: SwiftProtobuf.Messag
 
 nonisolated extension Resources_Jobs_Groups_GroupQualificationRule: SwiftProtobuf.Message, SwiftProtobuf._MessageImplementationBase, SwiftProtobuf._ProtoNameProviding {
   static let protoMessageName: String = _protobuf_package + ".GroupQualificationRule"
-  static let _protobuf_nameMap = SwiftProtobuf._NameMap(bytecode: "\0\u{1}type\0\u{3}qualification_ids\0\u{3}require_completed\0")
+  static let _protobuf_nameMap = SwiftProtobuf._NameMap(bytecode: "\0\u{1}type\0\u{3}qualification_ids\0\u{3}require_completed\0\u{1}qualifications\0")
 
   mutating func decodeMessage<D: SwiftProtobuf.Decoder>(decoder: inout D) throws {
     while let fieldNumber = try decoder.nextFieldNumber() {
@@ -1651,6 +1654,7 @@ nonisolated extension Resources_Jobs_Groups_GroupQualificationRule: SwiftProtobu
       case 1: try { try decoder.decodeSingularEnumField(value: &self.type) }()
       case 2: try { try decoder.decodeRepeatedInt64Field(value: &self.qualificationIds) }()
       case 3: try { try decoder.decodeSingularBoolField(value: &self.requireCompleted) }()
+      case 4: try { try decoder.decodeRepeatedMessageField(value: &self.qualifications) }()
       default: break
       }
     }
@@ -1666,6 +1670,9 @@ nonisolated extension Resources_Jobs_Groups_GroupQualificationRule: SwiftProtobu
     if self.requireCompleted != false {
       try visitor.visitSingularBoolField(value: self.requireCompleted, fieldNumber: 3)
     }
+    if !self.qualifications.isEmpty {
+      try visitor.visitRepeatedMessageField(value: self.qualifications, fieldNumber: 4)
+    }
     try unknownFields.traverse(visitor: &visitor)
   }
 
@@ -1673,6 +1680,7 @@ nonisolated extension Resources_Jobs_Groups_GroupQualificationRule: SwiftProtobu
     if lhs.type != rhs.type {return false}
     if lhs.qualificationIds != rhs.qualificationIds {return false}
     if lhs.requireCompleted != rhs.requireCompleted {return false}
+    if lhs.qualifications != rhs.qualifications {return false}
     if lhs.unknownFields != rhs.unknownFields {return false}
     return true
   }

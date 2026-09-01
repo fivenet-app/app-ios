@@ -67,15 +67,6 @@ nonisolated struct Services_Documents_GetTemplateRequest: Sendable {
 
   var templateID: Int64 = 0
 
-  var data: Resources_Documents_Templates_TemplateData {
-    get {_data ?? Resources_Documents_Templates_TemplateData()}
-    set {_data = newValue}
-  }
-  /// Returns true if `data` has been explicitly set.
-  var hasData: Bool {self._data != nil}
-  /// Clears the value of `data`. Subsequent reads from it will return its default value.
-  mutating func clearData() {self._data = nil}
-
   var render: Bool {
     get {_render ?? false}
     set {_render = newValue}
@@ -85,12 +76,21 @@ nonisolated struct Services_Documents_GetTemplateRequest: Sendable {
   /// Clears the value of `render`. Subsequent reads from it will return its default value.
   mutating func clearRender() {self._render = nil}
 
+  var selection: Resources_Documents_Templates_TemplateSelection {
+    get {_selection ?? Resources_Documents_Templates_TemplateSelection()}
+    set {_selection = newValue}
+  }
+  /// Returns true if `selection` has been explicitly set.
+  var hasSelection: Bool {self._selection != nil}
+  /// Clears the value of `selection`. Subsequent reads from it will return its default value.
+  mutating func clearSelection() {self._selection = nil}
+
   var unknownFields = SwiftProtobuf.UnknownStorage()
 
   init() {}
 
-  fileprivate var _data: Resources_Documents_Templates_TemplateData? = nil
   fileprivate var _render: Bool? = nil
+  fileprivate var _selection: Resources_Documents_Templates_TemplateSelection? = nil
 }
 
 nonisolated struct Services_Documents_GetTemplateResponse: Sendable {
@@ -311,7 +311,7 @@ nonisolated extension Services_Documents_ListTemplatesResponse: SwiftProtobuf.Me
 
 nonisolated extension Services_Documents_GetTemplateRequest: SwiftProtobuf.Message, SwiftProtobuf._MessageImplementationBase, SwiftProtobuf._ProtoNameProviding {
   static let protoMessageName: String = _protobuf_package + ".GetTemplateRequest"
-  static let _protobuf_nameMap = SwiftProtobuf._NameMap(bytecode: "\0\u{3}template_id\0\u{1}data\0\u{1}render\0")
+  static let _protobuf_nameMap = SwiftProtobuf._NameMap(bytecode: "\0\u{3}template_id\0\u{2}\u{2}render\0\u{1}selection\0\u{c}\u{2}\u{1}")
 
   mutating func decodeMessage<D: SwiftProtobuf.Decoder>(decoder: inout D) throws {
     while let fieldNumber = try decoder.nextFieldNumber() {
@@ -320,8 +320,8 @@ nonisolated extension Services_Documents_GetTemplateRequest: SwiftProtobuf.Messa
       // enabled. https://github.com/apple/swift-protobuf/issues/1034
       switch fieldNumber {
       case 1: try { try decoder.decodeSingularInt64Field(value: &self.templateID) }()
-      case 2: try { try decoder.decodeSingularMessageField(value: &self._data) }()
       case 3: try { try decoder.decodeSingularBoolField(value: &self._render) }()
+      case 4: try { try decoder.decodeSingularMessageField(value: &self._selection) }()
       default: break
       }
     }
@@ -335,19 +335,19 @@ nonisolated extension Services_Documents_GetTemplateRequest: SwiftProtobuf.Messa
     if self.templateID != 0 {
       try visitor.visitSingularInt64Field(value: self.templateID, fieldNumber: 1)
     }
-    try { if let v = self._data {
-      try visitor.visitSingularMessageField(value: v, fieldNumber: 2)
-    } }()
     try { if let v = self._render {
       try visitor.visitSingularBoolField(value: v, fieldNumber: 3)
+    } }()
+    try { if let v = self._selection {
+      try visitor.visitSingularMessageField(value: v, fieldNumber: 4)
     } }()
     try unknownFields.traverse(visitor: &visitor)
   }
 
   static func ==(lhs: Services_Documents_GetTemplateRequest, rhs: Services_Documents_GetTemplateRequest) -> Bool {
     if lhs.templateID != rhs.templateID {return false}
-    if lhs._data != rhs._data {return false}
     if lhs._render != rhs._render {return false}
+    if lhs._selection != rhs._selection {return false}
     if lhs.unknownFields != rhs.unknownFields {return false}
     return true
   }

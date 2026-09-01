@@ -414,7 +414,8 @@ private struct DocumentBadge: Identifiable {
 
 /// Sheet to create a new document from a template.
 /// Templates with a schema require a selection of citizens/documents/vehicles
-/// copied into the app clipboard first.
+/// copied into the app clipboard first. The selection is sent as a `TemplateSelection`
+/// (IDs/plates); the server resolves the referenced objects itself (v2026.8.5).
 struct CreateDocumentSheet: View {
     @Environment(AppState.self) private var appState
     @Environment(\.dismiss) private var dismiss
@@ -740,25 +741,32 @@ struct CreateDocumentSheet: View {
         isCreating = true
         errorMessage = nil
         defer { isCreating = false }
-        await appState.ensureCharacterLoaded()
-        var data = Resources_Documents_Templates_TemplateData()
-        data.users = appState.clipboardUsers.filter { selectedUserIDs.contains($0.userID) }
-        data.documents = appState.clipboardDocuments
-            .filter { selectedDocumentIDs.contains($0.id) }
-            .map { documentShort(from: $0) }
-        data.vehicles = appState.clipboardVehicles.filter { selectedVehiclePlates.contains($0.plate) }
-        if let activeChar = appState.character {
-            data.activeChar = activeChar
-        } else if let activeCharID = appState.activeCharacterUserID {
-            data.activeChar.userID = activeCharID
-        }
+        let selection = selectionFromClipboard()
         do {
-            let id = try await appState.createDocument(templateID: selectedTemplate!.id, templateData: data)
+            let id = try await appState.createDocument(templateID: selectedTemplate!.id, templateSelection: selection)
             onCreated(id)
             dismiss()
         } catch {
-            errorMessage = await Self.diagnose(error, templateID: selectedTemplate?.id ?? 0, data: data, appState: appState)
+            errorMessage = await Self.diagnose(error, templateID: selectedTemplate?.id ?? 0, selection: selection, appState: appState)
         }
+    }
+
+    /// Buildings a `TemplateSelection` from the clipboard items selected in the UI.
+    /// The server resolves the referenced objects itself (per-request permissions,
+    /// job enrichment) and derives the active character from the auth token.
+    private func selectionFromClipboard() -> Resources_Documents_Templates_TemplateSelection? {
+        guard selectedUserIDs.isEmpty == false || selectedDocumentIDs.isEmpty == false || selectedVehiclePlates.isEmpty == false else { return nil }
+        var selection = Resources_Documents_Templates_TemplateSelection()
+        selection.userIds = appState.clipboardUsers
+            .filter { selectedUserIDs.contains($0.userID) }
+            .map(\.userID)
+        selection.documentIds = appState.clipboardDocuments
+            .filter { selectedDocumentIDs.contains($0.id) }
+            .map(\.id)
+        selection.plates = appState.clipboardVehicles
+            .filter { selectedVehiclePlates.contains($0.plate) }
+            .map(\.plate)
+        return selection
     }
 
     private func createBlank() async {
@@ -776,45 +784,34 @@ struct CreateDocumentSheet: View {
         }
     }
 
-    /// When the server answers with the sanitized `ErrFailedQuery`/`ErrTemplateFailed`,
+    /// When the server answers with the sanitized `ErrFailedQuery`/template errors,
     /// the real cause is swallowed by `errswrap`. Retry with `GetTemplate(render:true)`
     /// which returns the raw template error when the caller has CreateTemplate
-    /// permission; otherwise the server still reports `ErrTemplateFailed` (same cause).
-    private static func diagnose(_ error: Error, templateID: Int64, data: Resources_Documents_Templates_TemplateData, appState: AppState) async -> String {
+    /// permission; otherwise the server still reports a generic template error.
+    private static func diagnose(_ error: Error, templateID: Int64, selection: Resources_Documents_Templates_TemplateSelection?, appState: AppState) async -> String {
         let message = error.localizedDescription
-        guard message.contains("ErrFailedQuery") || message.contains("FailedQuery") || message.contains("ErrTemplateFailed") || message.contains("TemplateFailed") else {
+        let templateErrorTokens = [
+            "ErrFailedQuery", "FailedQuery",
+            "ErrTemplateInvalid", "TemplateInvalid",
+            "ErrTemplateRequirementsNotMet", "ErrTemplateRequirementsExceeded",
+            "ErrTemplateOutputInvalid", "ErrTemplateRenderFailed", "ErrTemplateActiveChar",
+            "ErrTemplateFailed", "TemplateFailed",
+        ]
+        guard templateErrorTokens.contains(where: { message.contains($0) }) else {
             return message
         }
         do {
-            _ = try await appState.getTemplate(templateID: templateID, templateData: data, render: true)
+            _ = try await appState.getTemplate(templateID: templateID, templateSelection: selection, render: true)
             return "\(message)\n\n(GetTemplate-Render lieferte keine Fehlermeldung.)"
         } catch {
             let detail = error.localizedDescription
-            let hint = detail.contains("ErrTemplateFailed")
+            let hint = (detail.contains("TemplateInvalid") || detail.contains("TemplateFailed"))
                 ? "Die Vorlage wird serverseitig gerendert; die genaue Ursache steht nur im Server-Log (der Fehler wird über gRPC gekürzt zurückgegeben)."
                 : ""
             if hint.isEmpty {
                 return "\(message)\n\nDetail: \(detail)"
             }
             return "\(message)\n\n\(hint)"
-        }
-    }
-
-    private func documentShort(from document: Resources_Documents_Document) -> Resources_Documents_DocumentShort {
-        Resources_Documents_DocumentShort.with { short in
-            short.id = document.id
-            short.createdAt = document.createdAt
-            short.updatedAt = document.updatedAt
-            short.categoryID = document.categoryID
-            short.category = document.category
-            short.title = document.title
-            short.contentType = document.contentType
-            short.creatorID = document.creatorID
-            short.creator = document.creator
-            short.creatorJob = document.creatorJob
-            short.creatorJobLabel = document.creatorJobLabel
-            short.meta = document.meta
-            short.pin = document.pin
         }
     }
 }

@@ -321,8 +321,10 @@ struct GroupRuleEditorSheet: View {
                         }
                     }
                     .pickerStyle(.segmented)
-                    .onChange(of: ruleKind) { _, _ in
-                        // Selection in die richtige Struktur übernehmen
+                    .onChange(of: ruleKind) { _, newKind in
+                        if newKind == .qualification, qualifications.isEmpty {
+                            Task { await loadQualifications() }
+                        }
                     }
                     Toggle("Aktiv", isOn: $enabled)
                 }
@@ -357,7 +359,7 @@ struct GroupRuleEditorSheet: View {
             }
         .task {
             seed()
-            if ruleKind == .qualification || rule?.rule != nil {
+            if ruleKind == .qualification || rule?.rule != nil || qualifications.isEmpty {
                 await loadQualifications()
             }
         }
@@ -422,6 +424,10 @@ struct GroupRuleEditorSheet: View {
                     Text("Lade Qualifikationen …")
                         .foregroundStyle(.secondary)
                 }
+            } else if errorMessage != nil {
+                Label("Qualifikationen konnten nicht geladen werden.", systemImage: "exclamationmark.triangle.fill")
+                    .font(.caption)
+                    .foregroundStyle(Theme.Palette.danger)
             } else if qualifications.isEmpty {
                 Text("Keine Qualifikationen verfügbar.")
                     .foregroundStyle(.secondary)
@@ -488,7 +494,7 @@ struct GroupRuleEditorSheet: View {
         isLoadingQualifications = true
         defer { isLoadingQualifications = false }
         do {
-            let response = try await appState.listQualifications(search: "", pageSize: 100)
+            let response = try await appState.listQualifications(search: "", pageSize: 20)
             qualifications = response.qualifications
         } catch {
             errorMessage = error.localizedDescription

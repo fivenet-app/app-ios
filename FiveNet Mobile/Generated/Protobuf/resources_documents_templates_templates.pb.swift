@@ -369,14 +369,7 @@ nonisolated struct Resources_Documents_Templates_ObjectSpecs: Sendable {
   // `Message` and `Message+*Additions` files in the SwiftProtobuf library for
   // methods supported on all messages.
 
-  var required: Bool {
-    get {_required ?? false}
-    set {_required = newValue}
-  }
-  /// Returns true if `required` has been explicitly set.
-  var hasRequired: Bool {self._required != nil}
-  /// Clears the value of `required`. Subsequent reads from it will return its default value.
-  mutating func clearRequired() {self._required = nil}
+  var required: Bool = false
 
   var min: Int32 {
     get {_min ?? 0}
@@ -400,36 +393,24 @@ nonisolated struct Resources_Documents_Templates_ObjectSpecs: Sendable {
 
   init() {}
 
-  fileprivate var _required: Bool? = nil
   fileprivate var _min: Int32? = nil
   fileprivate var _max: Int32? = nil
 }
 
-nonisolated struct Resources_Documents_Templates_TemplateData: Sendable {
+nonisolated struct Resources_Documents_Templates_TemplateSelection: Sendable {
   // SwiftProtobuf.Message conformance is added in an extension below. See the
   // `Message` and `Message+*Additions` files in the SwiftProtobuf library for
   // methods supported on all messages.
 
-  var activeChar: Resources_Users_User {
-    get {_activeChar ?? Resources_Users_User()}
-    set {_activeChar = newValue}
-  }
-  /// Returns true if `activeChar` has been explicitly set.
-  var hasActiveChar: Bool {self._activeChar != nil}
-  /// Clears the value of `activeChar`. Subsequent reads from it will return its default value.
-  mutating func clearActiveChar() {self._activeChar = nil}
+  var userIds: [Int32] = []
 
-  var documents: [Resources_Documents_DocumentShort] = []
+  var documentIds: [Int64] = []
 
-  var users: [Resources_Users_Short_UserShort] = []
-
-  var vehicles: [Resources_Vehicles_Vehicle] = []
+  var plates: [String] = []
 
   var unknownFields = SwiftProtobuf.UnknownStorage()
 
   init() {}
-
-  fileprivate var _activeChar: Resources_Users_User? = nil
 }
 
 nonisolated struct Resources_Documents_Templates_TemplateApproval: Sendable {
@@ -984,7 +965,7 @@ nonisolated extension Resources_Documents_Templates_ObjectSpecs: SwiftProtobuf.M
       // allocates stack space for every case branch when no optimizations are
       // enabled. https://github.com/apple/swift-protobuf/issues/1034
       switch fieldNumber {
-      case 1: try { try decoder.decodeSingularBoolField(value: &self._required) }()
+      case 1: try { try decoder.decodeSingularBoolField(value: &self.required) }()
       case 2: try { try decoder.decodeSingularInt32Field(value: &self._min) }()
       case 3: try { try decoder.decodeSingularInt32Field(value: &self._max) }()
       default: break
@@ -997,9 +978,9 @@ nonisolated extension Resources_Documents_Templates_ObjectSpecs: SwiftProtobuf.M
     // allocates stack space for every if/case branch local when no optimizations
     // are enabled. https://github.com/apple/swift-protobuf/issues/1034 and
     // https://github.com/apple/swift-protobuf/issues/1182
-    try { if let v = self._required {
-      try visitor.visitSingularBoolField(value: v, fieldNumber: 1)
-    } }()
+    if self.required != false {
+      try visitor.visitSingularBoolField(value: self.required, fieldNumber: 1)
+    }
     try { if let v = self._min {
       try visitor.visitSingularInt32Field(value: v, fieldNumber: 2)
     } }()
@@ -1010,7 +991,7 @@ nonisolated extension Resources_Documents_Templates_ObjectSpecs: SwiftProtobuf.M
   }
 
   static func ==(lhs: Resources_Documents_Templates_ObjectSpecs, rhs: Resources_Documents_Templates_ObjectSpecs) -> Bool {
-    if lhs._required != rhs._required {return false}
+    if lhs.required != rhs.required {return false}
     if lhs._min != rhs._min {return false}
     if lhs._max != rhs._max {return false}
     if lhs.unknownFields != rhs.unknownFields {return false}
@@ -1018,9 +999,9 @@ nonisolated extension Resources_Documents_Templates_ObjectSpecs: SwiftProtobuf.M
   }
 }
 
-nonisolated extension Resources_Documents_Templates_TemplateData: SwiftProtobuf.Message, SwiftProtobuf._MessageImplementationBase, SwiftProtobuf._ProtoNameProviding {
-  static let protoMessageName: String = _protobuf_package + ".TemplateData"
-  static let _protobuf_nameMap = SwiftProtobuf._NameMap(bytecode: "\0\u{3}active_char\0\u{1}documents\0\u{1}users\0\u{1}vehicles\0")
+nonisolated extension Resources_Documents_Templates_TemplateSelection: SwiftProtobuf.Message, SwiftProtobuf._MessageImplementationBase, SwiftProtobuf._ProtoNameProviding {
+  static let protoMessageName: String = _protobuf_package + ".TemplateSelection"
+  static let _protobuf_nameMap = SwiftProtobuf._NameMap(bytecode: "\0\u{3}user_ids\0\u{3}document_ids\0\u{1}plates\0")
 
   mutating func decodeMessage<D: SwiftProtobuf.Decoder>(decoder: inout D) throws {
     while let fieldNumber = try decoder.nextFieldNumber() {
@@ -1028,40 +1009,31 @@ nonisolated extension Resources_Documents_Templates_TemplateData: SwiftProtobuf.
       // allocates stack space for every case branch when no optimizations are
       // enabled. https://github.com/apple/swift-protobuf/issues/1034
       switch fieldNumber {
-      case 1: try { try decoder.decodeSingularMessageField(value: &self._activeChar) }()
-      case 2: try { try decoder.decodeRepeatedMessageField(value: &self.documents) }()
-      case 3: try { try decoder.decodeRepeatedMessageField(value: &self.users) }()
-      case 4: try { try decoder.decodeRepeatedMessageField(value: &self.vehicles) }()
+      case 1: try { try decoder.decodeRepeatedInt32Field(value: &self.userIds) }()
+      case 2: try { try decoder.decodeRepeatedInt64Field(value: &self.documentIds) }()
+      case 3: try { try decoder.decodeRepeatedStringField(value: &self.plates) }()
       default: break
       }
     }
   }
 
   func traverse<V: SwiftProtobuf.Visitor>(visitor: inout V) throws {
-    // The use of inline closures is to circumvent an issue where the compiler
-    // allocates stack space for every if/case branch local when no optimizations
-    // are enabled. https://github.com/apple/swift-protobuf/issues/1034 and
-    // https://github.com/apple/swift-protobuf/issues/1182
-    try { if let v = self._activeChar {
-      try visitor.visitSingularMessageField(value: v, fieldNumber: 1)
-    } }()
-    if !self.documents.isEmpty {
-      try visitor.visitRepeatedMessageField(value: self.documents, fieldNumber: 2)
+    if !self.userIds.isEmpty {
+      try visitor.visitPackedInt32Field(value: self.userIds, fieldNumber: 1)
     }
-    if !self.users.isEmpty {
-      try visitor.visitRepeatedMessageField(value: self.users, fieldNumber: 3)
+    if !self.documentIds.isEmpty {
+      try visitor.visitPackedInt64Field(value: self.documentIds, fieldNumber: 2)
     }
-    if !self.vehicles.isEmpty {
-      try visitor.visitRepeatedMessageField(value: self.vehicles, fieldNumber: 4)
+    if !self.plates.isEmpty {
+      try visitor.visitRepeatedStringField(value: self.plates, fieldNumber: 3)
     }
     try unknownFields.traverse(visitor: &visitor)
   }
 
-  static func ==(lhs: Resources_Documents_Templates_TemplateData, rhs: Resources_Documents_Templates_TemplateData) -> Bool {
-    if lhs._activeChar != rhs._activeChar {return false}
-    if lhs.documents != rhs.documents {return false}
-    if lhs.users != rhs.users {return false}
-    if lhs.vehicles != rhs.vehicles {return false}
+  static func ==(lhs: Resources_Documents_Templates_TemplateSelection, rhs: Resources_Documents_Templates_TemplateSelection) -> Bool {
+    if lhs.userIds != rhs.userIds {return false}
+    if lhs.documentIds != rhs.documentIds {return false}
+    if lhs.plates != rhs.plates {return false}
     if lhs.unknownFields != rhs.unknownFields {return false}
     return true
   }

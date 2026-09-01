@@ -411,6 +411,11 @@ private struct QualificationsListView: View {
     @State private var totalCount: Int64 = 0
     @State private var hasLoaded = false
     @State private var searchTask: Task<Void, Never>?
+    @State private var showCreate = false
+
+    private var canCreate: Bool {
+        appState.can("qualifications.QualificationsService/UpdateQualification")
+    }
 
     private var totalPages: Int64 {
         max(1, Int64(ceil(Double(totalCount) / Double(Self.pageSize))))
@@ -542,6 +547,25 @@ private struct QualificationsListView: View {
                 guard !hasLoaded else { return }
                 hasLoaded = true
                 await load(reset: true)
+            }
+            .toolbar {
+                if canCreate {
+                    ToolbarItem(placement: .topBarTrailing) {
+                        Button {
+                            showCreate = true
+                        } label: {
+                            Image(systemName: "plus")
+                                .font(.title2)
+                                .foregroundStyle(Theme.Palette.accent)
+                        }
+                    }
+                }
+            }
+            .sheet(isPresented: $showCreate) {
+                QualificationEditorSheet(qualification: nil) { _ in
+                    showCreate = false
+                    Task { await load(reset: true) }
+                }
             }
         }
     }
@@ -745,6 +769,7 @@ private struct QUALIDBadge: View {
 private func formatScore(_ score: Float) -> String {
     score.formatted()
 }
+
 
 #Preview {
     NavigationStack {

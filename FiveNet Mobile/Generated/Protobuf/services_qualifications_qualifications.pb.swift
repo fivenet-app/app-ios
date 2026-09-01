@@ -339,6 +339,15 @@ nonisolated struct Services_Qualifications_ListQualificationRequestsRequest: Sen
 
   var userIds: [Int32] = []
 
+  var search: String {
+    get {_search ?? String()}
+    set {_search = newValue}
+  }
+  /// Returns true if `search` has been explicitly set.
+  var hasSearch: Bool {self._search != nil}
+  /// Clears the value of `search`. Subsequent reads from it will return its default value.
+  mutating func clearSearch() {self._search = nil}
+
   var unknownFields = SwiftProtobuf.UnknownStorage()
 
   init() {}
@@ -346,6 +355,7 @@ nonisolated struct Services_Qualifications_ListQualificationRequestsRequest: Sen
   fileprivate var _pagination: Resources_Common_Database_PaginationRequest? = nil
   fileprivate var _sort: Resources_Common_Database_Sort? = nil
   fileprivate var _qualificationID: Int64? = nil
+  fileprivate var _search: String? = nil
 }
 
 nonisolated struct Services_Qualifications_ListQualificationRequestsResponse: Sendable {
@@ -474,6 +484,15 @@ nonisolated struct Services_Qualifications_ListQualificationsResultsRequest: Sen
 
   var userIds: [Int32] = []
 
+  var search: String {
+    get {_search ?? String()}
+    set {_search = newValue}
+  }
+  /// Returns true if `search` has been explicitly set.
+  var hasSearch: Bool {self._search != nil}
+  /// Clears the value of `search`. Subsequent reads from it will return its default value.
+  mutating func clearSearch() {self._search = nil}
+
   var unknownFields = SwiftProtobuf.UnknownStorage()
 
   init() {}
@@ -481,6 +500,7 @@ nonisolated struct Services_Qualifications_ListQualificationsResultsRequest: Sen
   fileprivate var _pagination: Resources_Common_Database_PaginationRequest? = nil
   fileprivate var _sort: Resources_Common_Database_Sort? = nil
   fileprivate var _qualificationID: Int64? = nil
+  fileprivate var _search: String? = nil
 }
 
 nonisolated struct Services_Qualifications_ListQualificationsResultsResponse: Sendable {
@@ -1042,7 +1062,7 @@ nonisolated extension Services_Qualifications_SetQualificationAccessResponse: Sw
 
 nonisolated extension Services_Qualifications_ListQualificationRequestsRequest: SwiftProtobuf.Message, SwiftProtobuf._MessageImplementationBase, SwiftProtobuf._ProtoNameProviding {
   static let protoMessageName: String = _protobuf_package + ".ListQualificationRequestsRequest"
-  static let _protobuf_nameMap = SwiftProtobuf._NameMap(bytecode: "\0\u{1}pagination\0\u{1}sort\0\u{3}qualification_id\0\u{1}status\0\u{3}user_ids\0")
+  static let _protobuf_nameMap = SwiftProtobuf._NameMap(bytecode: "\0\u{1}pagination\0\u{1}sort\0\u{3}qualification_id\0\u{1}status\0\u{3}user_ids\0\u{1}search\0")
 
   mutating func decodeMessage<D: SwiftProtobuf.Decoder>(decoder: inout D) throws {
     while let fieldNumber = try decoder.nextFieldNumber() {
@@ -1055,6 +1075,7 @@ nonisolated extension Services_Qualifications_ListQualificationRequestsRequest: 
       case 3: try { try decoder.decodeSingularInt64Field(value: &self._qualificationID) }()
       case 4: try { try decoder.decodeRepeatedEnumField(value: &self.status) }()
       case 5: try { try decoder.decodeRepeatedInt32Field(value: &self.userIds) }()
+      case 6: try { try decoder.decodeSingularStringField(value: &self._search) }()
       default: break
       }
     }
@@ -1080,6 +1101,9 @@ nonisolated extension Services_Qualifications_ListQualificationRequestsRequest: 
     if !self.userIds.isEmpty {
       try visitor.visitPackedInt32Field(value: self.userIds, fieldNumber: 5)
     }
+    try { if let v = self._search {
+      try visitor.visitSingularStringField(value: v, fieldNumber: 6)
+    } }()
     try unknownFields.traverse(visitor: &visitor)
   }
 
@@ -1089,6 +1113,7 @@ nonisolated extension Services_Qualifications_ListQualificationRequestsRequest: 
     if lhs._qualificationID != rhs._qualificationID {return false}
     if lhs.status != rhs.status {return false}
     if lhs.userIds != rhs.userIds {return false}
+    if lhs._search != rhs._search {return false}
     if lhs.unknownFields != rhs.unknownFields {return false}
     return true
   }
@@ -1257,7 +1282,7 @@ nonisolated extension Services_Qualifications_DeleteQualificationReqResponse: Sw
 
 nonisolated extension Services_Qualifications_ListQualificationsResultsRequest: SwiftProtobuf.Message, SwiftProtobuf._MessageImplementationBase, SwiftProtobuf._ProtoNameProviding {
   static let protoMessageName: String = _protobuf_package + ".ListQualificationsResultsRequest"
-  static let _protobuf_nameMap = SwiftProtobuf._NameMap(bytecode: "\0\u{1}pagination\0\u{1}sort\0\u{3}qualification_id\0\u{1}status\0\u{3}user_ids\0")
+  static let _protobuf_nameMap = SwiftProtobuf._NameMap(bytecode: "\0\u{1}pagination\0\u{1}sort\0\u{3}qualification_id\0\u{1}status\0\u{3}user_ids\0\u{1}search\0")
 
   mutating func decodeMessage<D: SwiftProtobuf.Decoder>(decoder: inout D) throws {
     while let fieldNumber = try decoder.nextFieldNumber() {
@@ -1270,6 +1295,7 @@ nonisolated extension Services_Qualifications_ListQualificationsResultsRequest: 
       case 3: try { try decoder.decodeSingularInt64Field(value: &self._qualificationID) }()
       case 4: try { try decoder.decodeRepeatedEnumField(value: &self.status) }()
       case 5: try { try decoder.decodeRepeatedInt32Field(value: &self.userIds) }()
+      case 6: try { try decoder.decodeSingularStringField(value: &self._search) }()
       default: break
       }
     }
@@ -1295,6 +1321,9 @@ nonisolated extension Services_Qualifications_ListQualificationsResultsRequest: 
     if !self.userIds.isEmpty {
       try visitor.visitPackedInt32Field(value: self.userIds, fieldNumber: 5)
     }
+    try { if let v = self._search {
+      try visitor.visitSingularStringField(value: v, fieldNumber: 6)
+    } }()
     try unknownFields.traverse(visitor: &visitor)
   }
 
@@ -1304,6 +1333,7 @@ nonisolated extension Services_Qualifications_ListQualificationsResultsRequest: 
     if lhs._qualificationID != rhs._qualificationID {return false}
     if lhs.status != rhs.status {return false}
     if lhs.userIds != rhs.userIds {return false}
+    if lhs._search != rhs._search {return false}
     if lhs.unknownFields != rhs.unknownFields {return false}
     return true
   }

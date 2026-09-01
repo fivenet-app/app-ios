@@ -728,14 +728,15 @@ final class FiveNetClient: @unchecked Sendable {
         return response.templates
     }
 
-    /// Fetches a template with rendered content (render=true). The server returns
-    /// the raw template error (instead of a sanitized ErrFailedQuery) when the
-    /// caller has CreateTemplate permission, which is useful for diagnostics.
-    func getTemplate(templateID: Int64, templateData: Resources_Documents_Templates_TemplateData? = nil, render: Bool = false) async throws -> Resources_Documents_Templates_Template {
+    /// Fetches a template with rendered content (render=true). The server resolves
+    /// the selection (citizens/documents/vehicles) itself and returns the raw
+    /// template error (instead of a sanitized ErrFailedQuery) when the caller has
+    /// CreateTemplate permission, which is useful for diagnostics.
+    func getTemplate(templateID: Int64, templateSelection: Resources_Documents_Templates_TemplateSelection? = nil, render: Bool = false) async throws -> Resources_Documents_Templates_Template {
         var request = Services_Documents_GetTemplateRequest()
         request.templateID = templateID
-        if let templateData {
-            request.data = templateData
+        if let templateSelection {
+            request.selection = templateSelection
         }
         request.render = render
         let response: Services_Documents_GetTemplateResponse = try await call(
@@ -749,14 +750,14 @@ final class FiveNetClient: @unchecked Sendable {
 
     /// Creates a new document from a template and returns the new document id.
     /// When `templateID` is omitted, an empty document is created instead.
-    func createDocument(templateID: Int64? = nil, templateData: Resources_Documents_Templates_TemplateData? = nil) async throws -> Int64 {
+    func createDocument(templateID: Int64? = nil, templateSelection: Resources_Documents_Templates_TemplateSelection? = nil) async throws -> Int64 {
         var request = Services_Documents_CreateDocumentRequest()
         if let templateID {
             request.templateID = templateID
         }
         request.contentType = .html
-        if let templateData {
-            request.templateData = templateData
+        if let templateSelection {
+            request.templateSelection = templateSelection
         }
         let response: Services_Documents_CreateDocumentResponse = try await call(
             service: "services.documents.DocumentsService",
@@ -2091,15 +2092,45 @@ final class FiveNetClient: @unchecked Sendable {
         )
     }
 
+    /// Creates a new, empty qualification. Mirrors the web `useQualifications.createQualification`
+    /// (sends `ContentType.HTML`; the web then navigates to the edit page).
+    func createQualification(contentType: Resources_Common_Content_ContentType = .html) async throws -> Services_Qualifications_CreateQualificationResponse {
+        var request = Services_Qualifications_CreateQualificationRequest()
+        request.contentType = contentType
+        return try await call(
+            service: "services.qualifications.QualificationsService",
+            method: "CreateQualification",
+            requestData: try request.serializedData(),
+            responseType: Services_Qualifications_CreateQualificationResponse.self
+        )
+    }
+
+    /// Updates an existing qualification. Mirrors the web `Editor.vue.updateQualification`:
+    /// the creator/creator_job are taken from the current character, the qualification
+    /// carries job="", weight=0, exam_mode (default DISABLED) and the access list.
+    func updateQualification(_ qualification: Resources_Qualifications_Qualification) async throws -> Services_Qualifications_UpdateQualificationResponse {
+        var request = Services_Qualifications_UpdateQualificationRequest()
+        request.qualification = qualification
+        return try await call(
+            service: "services.qualifications.QualificationsService",
+            method: "UpdateQualification",
+            requestData: try request.serializedData(),
+            responseType: Services_Qualifications_UpdateQualificationResponse.self
+        )
+    }
+
     /// Lists qualification results (the caller's own results by default, or a
     /// specific user's via `userIds`). Mirrors the web `ResultList.vue`.
-    func listQualificationsResults(qualificationID: Int64? = nil, statuses: [Resources_Qualifications_ResultStatus] = [], userIds: [Int32] = [], offset: Int64 = 0, pageSize: Int64 = 50) async throws -> Services_Qualifications_ListQualificationsResultsResponse {
+    func listQualificationsResults(qualificationID: Int64? = nil, statuses: [Resources_Qualifications_ResultStatus] = [], userIds: [Int32] = [], search: String? = nil, offset: Int64 = 0, pageSize: Int64 = 50) async throws -> Services_Qualifications_ListQualificationsResultsResponse {
         var request = Services_Qualifications_ListQualificationsResultsRequest()
         if let qualificationID {
             request.qualificationID = qualificationID
         }
         request.status = statuses
         request.userIds = userIds
+        if let search {
+            request.search = search
+        }
         request.pagination.offset = offset
         request.pagination.pageSize = pageSize
         request.sort.columns = [
@@ -2115,11 +2146,14 @@ final class FiveNetClient: @unchecked Sendable {
 
     /// Lists qualification requests for a specific qualification (tutor view).
     /// Mirrors the web `RequestList.vue` in the tutor tab.
-    func listQualificationRequests(qualificationID: Int64, statuses: [Resources_Qualifications_RequestStatus] = [], userIds: [Int32] = [], offset: Int64 = 0, pageSize: Int64 = 10) async throws -> Services_Qualifications_ListQualificationRequestsResponse {
+    func listQualificationRequests(qualificationID: Int64, statuses: [Resources_Qualifications_RequestStatus] = [], userIds: [Int32] = [], search: String? = nil, offset: Int64 = 0, pageSize: Int64 = 10) async throws -> Services_Qualifications_ListQualificationRequestsResponse {
         var request = Services_Qualifications_ListQualificationRequestsRequest()
         request.qualificationID = qualificationID
         request.status = statuses
         request.userIds = userIds
+        if let search {
+            request.search = search
+        }
         request.pagination.offset = offset
         request.pagination.pageSize = pageSize
         request.sort.columns = [
